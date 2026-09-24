@@ -21,7 +21,7 @@ interface Facilitator {
   createdAt: string
 }
 
-const emptyForm = { name: '', password: '', gameId: '', isActive: true }
+const emptyForm = { name: '', faciId: '', password: '', gameId: '', isActive: true }
 
 export default function FacilitatorsPage() {
   const [facis, setFacis] = useState<Facilitator[]>([])
@@ -29,7 +29,7 @@ export default function FacilitatorsPage() {
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editFaci, setEditFaci] = useState<Facilitator | null>(null)
-  const [form, setForm] = useState<{ name: string; password: string; gameId: string; isActive: boolean }>(emptyForm)
+  const [form, setForm] = useState<{ name: string; faciId: string; password: string; gameId: string; isActive: boolean }>(emptyForm)
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -58,7 +58,7 @@ export default function FacilitatorsPage() {
 
   function openEdit(faci: Facilitator) {
     setEditFaci(faci)
-    setForm({ name: faci.name, password: '', gameId: faci.gameId || '', isActive: faci.isActive })
+    setForm({ name: faci.name, faciId: '', password: '', gameId: faci.gameId || '', isActive: faci.isActive })
     setShowModal(true)
   }
 
@@ -66,7 +66,7 @@ export default function FacilitatorsPage() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      const payload = { ...form, gameId: form.gameId || null }
+      const payload: Record<string, unknown> = { ...form, gameId: form.gameId || null }
       const url = editFaci ? `/api/facilitators/${editFaci.id}` : '/api/facilitators'
       const method = editFaci ? 'PATCH' : 'POST'
 
@@ -260,6 +260,23 @@ export default function FacilitatorsPage() {
                     <input type="text" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                       className="mission-input" placeholder="Full name" required />
                   </div>
+
+                  {/* Manual Faci ID — only on create */}
+                  {!editFaci && (
+                    <div>
+                      <label className="section-label block mb-1">
+                        AGENT ID <span className="text-mission-muted font-normal normal-case">(leave blank to auto-assign)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={form.faciId}
+                        onChange={(e) => setForm((f) => ({ ...f, faciId: e.target.value.toUpperCase() }))}
+                        className="mission-input mono tracking-widest"
+                        placeholder="e.g. FACI-001"
+                        maxLength={20}
+                      />
+                    </div>
+                  )}
                   <div>
                     <label className="section-label block mb-1">
                       {editFaci ? 'NEW PASSWORD (leave blank to keep)' : 'PASSWORD *'}

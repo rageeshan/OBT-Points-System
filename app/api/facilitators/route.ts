@@ -28,15 +28,31 @@ export async function POST(req: NextRequest) {
     const session = await getAdminSession()
     if (!session) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
 
-    const { name, password, gameId } = await req.json()
+    const { name, password, gameId, faciId: manualFaciId } = await req.json()
 
     if (!name || !password) {
       return NextResponse.json({ error: 'Name and password are required' }, { status: 400 })
     }
 
-    // Generate next FACI ID
-    const count = await prisma.facilitator.count()
-    const faciId = `FACI-${String(count + 1).padStart(3, '0')}`
+    let faciId: string
+
+    if (manualFaciId && manualFaciId.trim()) {
+      // Use manually entered Faci ID (uppercase, trimmed)
+      faciId = manualFaciId.trim().toUpperCase()
+      // Check uniqueness
+      const existing = await prisma.facilitator.findUnique({ where: { faciId } })
+      if (existing) {
+        return NextResponse.json({ error: `Agent ID "${faciId}" is already taken` }, { status: 409 })
+      }
+    } else {
+      // Auto-generate next FACI ID
+      const last = await prisma.facilitator.findFirst({
+        orderBy: { faciId: 'desc' },
+        select: { faciId: true },
+      })
+      const lastNum = last ? parseInt(last.faciId.replace('FACI-', ''), 10) : 0
+      faciId = `FACI-${String(lastNum + 1).padStart(3, '0')}`
+    }
 
     const passwordHash = await hashPassword(password)
 
