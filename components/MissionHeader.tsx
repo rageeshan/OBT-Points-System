@@ -2,8 +2,9 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Shield, Terminal, Trophy } from 'lucide-react'
+import { Terminal, Trophy } from 'lucide-react'
 
 interface MissionHeaderProps {
   title?: string
@@ -33,9 +34,16 @@ export default function MissionHeader({
             <motion.div
               animate={{ rotate: [0, 360] }}
               transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-              className="w-8 h-8 rounded-full border border-mission-red/40 flex items-center justify-center bg-mission-red/10 group-hover:border-mission-red/70 transition-colors"
+              className="w-9 h-9 rounded-full border border-mission-red/40 flex items-center justify-center bg-black/40 overflow-hidden p-1 group-hover:border-mission-red/70 transition-colors flex-shrink-0"
             >
-              <Shield className="w-4 h-4 text-mission-red" />
+              <Image
+                src="/icon.png"
+                alt="OBT Logo"
+                width={36}
+                height={36}
+                className="w-full h-full object-contain"
+                priority
+              />
             </motion.div>
             <div>
               <div className="mono text-xs font-bold tracking-widest text-mission-red leading-none">

@@ -7,6 +7,13 @@ export const metadata: Metadata = {
   description: 'Outbound Training 2026 — Live Mission Ranking and Points Management System',
   keywords: ['OBT', 'Outbound Training', 'Mission Control', 'Points System'],
   authors: [{ name: 'Mission Control HQ' }],
+  icons: {
+    icon: [
+      { url: '/icon.png', type: 'image/png' },
+    ],
+    shortcut: '/icon.png',
+    apple: '/icon.png',
+  },
 }
 
 export default function RootLayout({
@@ -17,6 +24,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="icon" href="/icon.png" type="image/png" sizes="any" />
+        <link rel="apple-touch-icon" href="/icon.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

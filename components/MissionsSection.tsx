@@ -29,7 +29,7 @@ export default function MissionsSection({ games }: { games: Game[] }) {
   if (games.length === 0) return null
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-20">
+    <section id="missions" className="max-w-7xl mx-auto px-4 sm:px-6 pb-20">
       {/* Section header */}
       <div className="text-center mb-10">
         <div className="classified-badge mx-auto w-fit mb-4">ACTIVE OPERATIONS</div>

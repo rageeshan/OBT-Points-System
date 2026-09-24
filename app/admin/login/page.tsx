@@ -47,7 +47,7 @@ export default function AdminLoginPage() {
           className="text-center mb-8"
         >
           <div className="classified-badge mx-auto w-fit mb-3">OMEGA CLEARANCE REQUIRED</div>
-          <h1 className="mono text-3xl font-black text-white tracking-wider">MISSION CONTROL</h1>
+          <h1 className="mono text-3xl font-black text-white tracking-wider">NLDS'26 MISSION CONTROL</h1>
           <p className="mono text-sm text-mission-muted mt-2 tracking-wider">SUPER ADMIN ACCESS</p>
         </motion.div>
 

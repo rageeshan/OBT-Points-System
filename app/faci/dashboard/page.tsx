@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Terminal, MapPin, Zap, LogOut, CheckCircle, Users, Target, Clock
@@ -180,8 +181,14 @@ export default function FaciDashboardPage() {
       {/* Header */}
       <header className="border-b border-mission-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-mission-amber/10 border border-mission-amber/30 flex items-center justify-center">
-            <Terminal className="w-4 h-4 text-mission-amber" />
+          <div className="w-8 h-8 rounded-full bg-black/40 border border-mission-amber/40 flex items-center justify-center overflow-hidden p-1 flex-shrink-0">
+            <Image
+              src="/icon.png"
+              alt="OBT Logo"
+              width={32}
+              height={32}
+              className="w-full h-full object-contain"
+            />
           </div>
           <div>
             <div className="mono text-xs font-bold text-mission-amber tracking-widest">{faciInfo.faciId}</div>

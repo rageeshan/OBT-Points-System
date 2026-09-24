@@ -30,22 +30,45 @@ export async function PATCH(
   if (!session) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
 
   try {
-    const { name, leaderName, member2, member3, member4, member5 } = await req.json()
+    const body = await req.json()
+    const name = body.name?.trim()
+    const leaderName = body.leaderName?.trim()
+
+    if (!name) {
+      return NextResponse.json({ error: 'Team name is required' }, { status: 400 })
+    }
+
+    if (!leaderName) {
+      return NextResponse.json({ error: 'Mission commander name is required (minimum 1 member)' }, { status: 400 })
+    }
+
+    const membersToCreate: { name: string; isLeader: boolean }[] = [
+      { name: leaderName, isLeader: true },
+    ]
+
+    if (Array.isArray(body.members)) {
+      for (const m of body.members) {
+        if (typeof m === 'string' && m.trim()) {
+          membersToCreate.push({ name: m.trim(), isLeader: false })
+        }
+      }
+    } else {
+      const additionalFields = [body.member2, body.member3, body.member4, body.member5]
+      for (const m of additionalFields) {
+        if (typeof m === 'string' && m.trim()) {
+          membersToCreate.push({ name: m.trim(), isLeader: false })
+        }
+      }
+    }
 
     const team = await prisma.team.update({
       where: { id },
       data: {
-        name: name?.trim(),
-        leaderName: leaderName?.trim(),
+        name,
+        leaderName,
         members: {
           deleteMany: {},
-          create: [
-            { name: leaderName.trim(), isLeader: true },
-            { name: member2.trim(), isLeader: false },
-            { name: member3.trim(), isLeader: false },
-            { name: member4.trim(), isLeader: false },
-            { name: member5.trim(), isLeader: false },
-          ],
+          create: membersToCreate,
         },
       },
       include: { members: true },

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -49,19 +50,27 @@ export default function AdminSidebar() {
       <aside className="hidden lg:flex w-64 flex-shrink-0 bg-mission-dark border-r border-mission-border flex-col h-screen sticky top-0">
         {/* Logo */}
         <div className="flex-shrink-0 p-6 border-b border-mission-border">
-          <div className="flex items-center gap-3">
+          <Link href="/admin" className="flex items-center gap-3 group">
             <motion.div
               animate={{ rotate: [0, 360] }}
               transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-              className="w-9 h-9 rounded-full border border-mission-red/40 flex items-center justify-center bg-mission-red/10"
+              className="w-10 h-10 rounded-full border border-mission-red/40 flex items-center justify-center bg-black/40 overflow-hidden p-1 group-hover:border-mission-red/70 transition-colors flex-shrink-0"
             >
-              <Shield className="w-4 h-4 text-mission-red" />
+              <Image
+                src="/icon.png"
+                alt="Mission Control Logo"
+                width={36}
+                height={36}
+                className="w-full h-full object-contain"
+                priority
+              />
             </motion.div>
             <div>
+              <div className="mono text-xs font-black tracking-widest text-mission-red">NLDS'26</div>
               <div className="mono text-xs font-black tracking-widest text-mission-red">MISSION</div>
               <div className="mono text-xs font-black tracking-widest text-mission-red">CONTROL</div>
             </div>
-          </div>
+          </Link>
           <div className="mt-3">
             <div className="classified-badge w-fit">OMEGA CLEARANCE</div>
           </div>
@@ -104,8 +113,16 @@ export default function AdminSidebar() {
 
       {/* ── MOBILE TOP BAR ──────────────────────────────── */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 bg-mission-dark border-b border-mission-border">
-        <Link href="/admin" className="flex items-center gap-2">
-          <Shield className="w-5 h-5 text-mission-red" />
+        <Link href="/admin" className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-full border border-mission-red/40 overflow-hidden p-0.5 bg-black/40 flex items-center justify-center flex-shrink-0">
+            <Image
+              src="/icon.png"
+              alt="Mission Control Logo"
+              width={24}
+              height={24}
+              className="w-full h-full object-contain"
+            />
+          </div>
           <span className="mono text-sm font-black tracking-widest text-mission-red">MISSION CONTROL</span>
         </Link>
         <button
@@ -139,8 +156,16 @@ export default function AdminSidebar() {
             >
               {/* Drawer header */}
               <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-mission-border">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-mission-red" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-full border border-mission-red/40 overflow-hidden p-0.5 bg-black/40 flex items-center justify-center flex-shrink-0">
+                    <Image
+                      src="/icon.png"
+                      alt="Mission Control Logo"
+                      width={24}
+                      height={24}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
                   <span className="mono text-sm font-black tracking-widest text-mission-red">MISSION CONTROL</span>
                 </div>
                 <button onClick={() => setDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-white/5 text-mission-muted hover:text-white">

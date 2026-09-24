@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/db/prisma'
 import Link from 'next/link'
-import { Shield, Trophy, Terminal, ChevronRight, Zap, Lock } from 'lucide-react'
+import { Shield, Trophy, Terminal, ChevronRight, Zap, Lock, UserCheck } from 'lucide-react'
 import MissionHeader from '@/components/MissionHeader'
 import MissionsSection from '@/components/MissionsSection'
+import FacilitatorsSection from '@/components/FacilitatorsSection'
 
 async function getGames() {
   try {
@@ -21,8 +22,27 @@ async function getGames() {
   }
 }
 
+async function getFacilitators() {
+  try {
+    return await prisma.facilitator.findMany({
+      where: { isActive: true },
+      include: {
+        game: {
+          select: { id: true, name: true, location: true },
+        },
+      },
+      orderBy: { faciId: 'asc' },
+    })
+  } catch {
+    return []
+  }
+}
+
 export default async function HomePage() {
-  const games = await getGames()
+  const [games, facilitators] = await Promise.all([
+    getGames(),
+    getFacilitators(),
+  ])
 
   return (
     <div className="mission-bg min-h-screen">
@@ -30,7 +50,7 @@ export default async function HomePage() {
 
       <main className="relative z-10">
         {/* Hero Section */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 py-24 sm:py-36 text-center">
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 py-24 sm:py-32 text-center">
           <div className="flex items-center justify-center gap-2 mb-6">
             <div className="classified-badge text-sm px-4 py-1.5">
               <span className="animate-blink">◉</span>
@@ -55,19 +75,28 @@ export default async function HomePage() {
             <div className="w-32 h-px bg-mission-red/40 mx-auto" />
           </div>
 
-
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/leaderboard" className="btn-mission text-sm sm:text-base py-3 px-8 flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+            <Link href="/leaderboard" className="btn-mission text-sm sm:text-base py-3 px-8 flex items-center justify-center gap-2">
               <Trophy className="w-4 h-4" />
               VIEW LIVE RANKING
               <ChevronRight className="w-4 h-4" />
             </Link>
+            <a href="#missions" className="btn-ghost text-sm sm:text-base py-3 px-8 flex items-center justify-center gap-2">
+              <Shield className="w-4 h-4 text-mission-red" />
+              MISSIONS ({games.length})
+            </a>
+            <a href="#facilitators" className="btn-ghost text-sm sm:text-base py-3 px-8 flex items-center justify-center gap-2">
+              <Terminal className="w-4 h-4 text-mission-amber" />
+              MISSION OFFICERS ({facilitators.length})
+            </a>
           </div>
         </section>
 
-        {/* Active Missions Grid */}
+        {/* Active Missions Grid — FIRST */}
         <MissionsSection games={games} />
+
+        {/* Facilitators List — SECOND */}
+        <FacilitatorsSection facilitators={facilitators} />
 
         {/* Mission Control link */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-24">

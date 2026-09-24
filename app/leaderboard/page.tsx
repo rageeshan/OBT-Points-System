@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@supabase/supabase-js'
 import { Trophy, Shield, Zap } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface LeaderboardEntry {
   id: string
@@ -82,16 +83,23 @@ export default function LeaderboardPage() {
       {/* Top Bar */}
       <header className="border-b border-mission-border px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 group">
             <motion.div
               animate={{ rotate: [0, 360] }}
               transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-              className="w-8 h-8 rounded-full border border-mission-red/40 flex items-center justify-center bg-mission-red/10"
+              className="w-9 h-9 rounded-full border border-mission-red/40 flex items-center justify-center bg-black/40 overflow-hidden p-1 group-hover:border-mission-red/70 transition-colors flex-shrink-0"
             >
-              <Shield className="w-4 h-4 text-mission-red" />
+              <Image
+                src="/icon.png"
+                alt="NLDS'26 OBT"
+                width={36}
+                height={36}
+                className="w-full h-full object-contain"
+                priority
+              />
             </motion.div>
             <div>
-              <div className="mono text-xs font-bold tracking-widest text-mission-red">NLDS'26 OBT LEADERBOARD</div>
+              <div className="mono text-xs font-bold tracking-widest text-mission-red">NLDS&apos;26 OBT LEADERBOARD</div>
               <div className="mono text-[10px] tracking-wider text-mission-muted">LIVE OPERATIONS</div>
             </div>
           </Link>

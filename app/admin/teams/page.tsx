@@ -27,14 +27,20 @@ interface Team {
   createdAt: string
 }
 
-const emptyForm = { name: '', leaderName: '', member2: '', member3: '', member4: '', member5: '' }
+interface TeamFormData {
+  name: string
+  leaderName: string
+  operatives: string[]
+}
+
+const emptyForm: TeamFormData = { name: '', leaderName: '', operatives: ['', '', '', ''] }
 
 export default function TeamsPage() {
   const [teams, setTeams] = useState<Team[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editTeam, setEditTeam] = useState<Team | null>(null)
-  const [form, setForm] = useState(emptyForm)
+  const [form, setForm] = useState<TeamFormData>(emptyForm)
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
@@ -52,34 +58,77 @@ export default function TeamsPage() {
 
   function openCreate() {
     setEditTeam(null)
-    setForm(emptyForm)
+    setForm({ name: '', leaderName: '', operatives: ['', '', '', ''] })
     setShowModal(true)
   }
 
   function openEdit(team: Team) {
     setEditTeam(team)
-    const nonLeaders = team.members.filter((m) => !m.isLeader)
+    const nonLeaders = team.members.filter((m) => !m.isLeader).map((m) => m.name)
+    const operativeSlots = [...nonLeaders]
+    while (operativeSlots.length < 4) {
+      operativeSlots.push('')
+    }
     setForm({
       name: team.name,
       leaderName: team.leaderName,
-      member2: nonLeaders[0]?.name || '',
-      member3: nonLeaders[1]?.name || '',
-      member4: nonLeaders[2]?.name || '',
-      member5: nonLeaders[3]?.name || '',
+      operatives: operativeSlots,
     })
     setShowModal(true)
   }
 
+  function updateOperative(index: number, val: string) {
+    setForm((f) => {
+      const next = [...f.operatives]
+      next[index] = val
+      return { ...f, operatives: next }
+    })
+  }
+
+  function addOperativeSlot() {
+    setForm((f) => ({ ...f, operatives: [...f.operatives, ''] }))
+  }
+
+  function removeOperativeSlot(index: number) {
+    setForm((f) => ({
+      ...f,
+      operatives: f.operatives.filter((_, i) => i !== index),
+    }))
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!form.name.trim()) {
+      toast.error('Unit name is required')
+      return
+    }
+    if (!form.leaderName.trim()) {
+      toast.error('Mission Commander name is required (minimum 1 member)')
+      return
+    }
+
     setSubmitting(true)
     try {
       const url = editTeam ? `/api/teams/${editTeam.id}` : '/api/teams'
       const method = editTeam ? 'PATCH' : 'POST'
+      const validOperatives = form.operatives
+        .map((op) => op.trim())
+        .filter((op) => op.length > 0)
+
+      const payload = {
+        name: form.name.trim(),
+        leaderName: form.leaderName.trim(),
+        members: validOperatives,
+        member2: validOperatives[0] || '',
+        member3: validOperatives[1] || '',
+        member4: validOperatives[2] || '',
+        member5: validOperatives[3] || '',
+      }
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -164,7 +213,12 @@ export default function TeamsPage() {
                     </div>
 
                     {/* Classification */}
-                    <div className="classified-badge mb-4 w-fit">TOP SECRET</div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="classified-badge w-fit">TOP SECRET</div>
+                      <div className="mono text-xs text-mission-muted">
+                        {team.members.length} {team.members.length === 1 ? 'OPERATIVE' : 'OPERATIVES'}
+                      </div>
+                    </div>
 
                     {/* Commander */}
                     <div className="mb-3">
@@ -177,15 +231,23 @@ export default function TeamsPage() {
 
                     {/* Operatives */}
                     <div className="mb-4">
-                      <div className="section-label">OPERATIVES</div>
-                      <div className="space-y-1">
-                        {nonLeaders.map((m, i) => (
-                          <div key={m.id} className="flex items-center gap-2 text-sm text-mission-muted">
-                            <Users className="w-3 h-3" />
-                            <span>{m.name}</span>
-                          </div>
-                        ))}
+                      <div className="section-label">
+                        OPERATIVES {nonLeaders.length > 0 ? `(${nonLeaders.length})` : ''}
                       </div>
+                      {nonLeaders.length > 0 ? (
+                        <div className="space-y-1">
+                          {nonLeaders.map((m) => (
+                            <div key={m.id} className="flex items-center gap-2 text-sm text-mission-muted">
+                              <Users className="w-3 h-3" />
+                              <span>{m.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-mission-muted/70 italic flex items-center gap-1.5 py-0.5">
+                          <span>Solo Operative (Commander only)</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Points */}
@@ -303,29 +365,59 @@ export default function TeamsPage() {
                     />
                   </div>
                   <div>
-                    <label className="section-label block mb-1">MISSION COMMANDER *</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="section-label">MISSION COMMANDER * (OPERATIVE 1)</label>
+                      <span className="mono text-[10px] text-mission-amber font-bold">REQUIRED (MIN 1)</span>
+                    </div>
                     <input
                       type="text"
                       value={form.leaderName}
                       onChange={(e) => setForm((f) => ({ ...f, leaderName: e.target.value }))}
                       className="mission-input"
-                      placeholder="Team leader name"
+                      placeholder="Team leader / Commander name"
                       required
                     />
                   </div>
-                  {(['member2', 'member3', 'member4', 'member5'] as const).map((field, i) => (
-                    <div key={field}>
-                      <label className="section-label block mb-1">OPERATIVE {i + 2} *</label>
-                      <input
-                        type="text"
-                        value={form[field]}
-                        onChange={(e) => setForm((f) => ({ ...f, [field]: e.target.value }))}
-                        className="mission-input"
-                        placeholder={`Operative ${i + 2} name`}
-                        required
-                      />
+
+                  <div className="space-y-3 pt-1">
+                    <div className="flex items-center justify-between border-t border-mission-border pt-3">
+                      <div className="section-label">ADDITIONAL OPERATIVES</div>
+                      <span className="mono text-[10px] text-mission-muted">OPTIONAL</span>
                     </div>
-                  ))}
+
+                    {form.operatives.map((op, i) => (
+                      <div key={i} className="flex gap-2 items-center">
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            value={op}
+                            onChange={(e) => updateOperative(i, e.target.value)}
+                            className="mission-input"
+                            placeholder={`Operative ${i + 2} name (optional)`}
+                          />
+                        </div>
+                        {form.operatives.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeOperativeSlot(i)}
+                            className="p-2 text-mission-muted hover:text-mission-red transition-colors"
+                            title="Remove field"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={addOperativeSlot}
+                      className="text-xs mono text-mission-amber hover:text-yellow-300 flex items-center gap-1.5 transition-colors pt-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      ADD ANOTHER OPERATIVE SLOT
+                    </button>
+                  </div>
                   <div className="flex gap-3 pt-2">
                     <button type="button" onClick={() => setShowModal(false)} className="btn-ghost flex-1">CANCEL</button>
                     <button type="submit" disabled={submitting} className="btn-mission flex-1 flex items-center justify-center gap-2">
