@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 
-// GET /api/leaderboard — public
+// GET /api/leaderboard — public, includes per-game score breakdown
 export async function GET() {
   try {
     const teams = await prisma.team.findMany({
@@ -10,14 +10,30 @@ export async function GET() {
         name: true,
         leaderName: true,
         currentPoints: true,
+        transactions: {
+          select: {
+            points: true,
+            game: { select: { id: true, name: true, location: true } },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
       },
       orderBy: { currentPoints: 'desc' },
     })
 
-    // Add rank
     const ranked = teams.map((team, idx) => ({
-      ...team,
+      id: team.id,
+      name: team.name,
+      leaderName: team.leaderName,
+      currentPoints: team.currentPoints,
       rank: idx + 1,
+      // Game breakdown: which games they scored in and how many points
+      gameScores: team.transactions.map((t) => ({
+        gameId: t.game.id,
+        gameName: t.game.name,
+        location: t.game.location,
+        points: t.points,
+      })),
     }))
 
     return NextResponse.json(ranked, {

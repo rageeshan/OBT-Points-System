@@ -3,7 +3,14 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@supabase/supabase-js'
-import { Trophy, TrendingUp, TrendingDown, Minus, Zap } from 'lucide-react'
+import { Trophy, Target } from 'lucide-react'
+
+interface GameScore {
+  gameId: string
+  gameName: string
+  location: string | null
+  points: number
+}
 
 interface LeaderboardEntry {
   id: string
@@ -11,6 +18,7 @@ interface LeaderboardEntry {
   leaderName: string
   currentPoints: number
   rank: number
+  gameScores?: GameScore[]
 }
 
 interface LeaderboardProps {
@@ -32,6 +40,7 @@ export default function Leaderboard({ initialData, large = false }: LeaderboardP
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [isLive, setIsLive] = useState(false)
   const [flashId, setFlashId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!supabaseUrl || supabaseUrl.includes('placeholder')) return
@@ -101,6 +110,8 @@ export default function Leaderboard({ initialData, large = false }: LeaderboardP
         {entries.map((entry, idx) => {
           const rankStyle = idx < 3 ? rankStyles[idx] : null
           const isFlashing = flashId === entry.id
+          const isExpanded = expandedId === entry.id
+          const hasGameScores = entry.gameScores && entry.gameScores.length > 0
 
           return (
             <motion.div
@@ -117,51 +128,103 @@ export default function Leaderboard({ initialData, large = false }: LeaderboardP
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.4, type: 'spring', stiffness: 200, damping: 25 }}
               className={`
-                mission-card rounded-lg px-5 py-4 flex items-center gap-4
+                mission-card rounded-lg overflow-hidden
                 ${rankStyle?.bg || ''}
-                ${large ? 'py-6' : ''}
+                ${large ? '' : ''}
               `}
             >
-              {/* Rank */}
-              <div className={`flex-shrink-0 ${large ? 'w-16' : 'w-10'} text-center`}>
-                {getIcon(entry.rank)}
+              {/* Main row */}
+              <div
+                className={`px-5 py-4 flex items-center gap-4 ${hasGameScores ? 'cursor-pointer' : ''}`}
+                onClick={() => hasGameScores && setExpandedId(isExpanded ? null : entry.id)}
+              >
+                {/* Rank */}
+                <div className={`flex-shrink-0 ${large ? 'w-16' : 'w-10'} text-center`}>
+                  {getIcon(entry.rank)}
+                </div>
+
+                {/* Team Info */}
+                <div className="flex-1 min-w-0">
+                  <div
+                    className={`mono font-black text-white tracking-wider truncate ${
+                      large ? 'text-3xl' : 'text-base'
+                    } ${entry.rank === 1 ? 'rank-1' : ''}`}
+                  >
+                    {entry.name.toUpperCase()}
+                  </div>
+                  <div className={`text-mission-muted truncate ${large ? 'text-base mt-1' : 'text-xs'}`}>
+                    CMD: {entry.leaderName}
+                  </div>
+                  {/* Game count pill */}
+                  {entry.gameScores && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Target className="w-3 h-3 text-mission-muted" />
+                      <span className="mono text-xs text-mission-muted">
+                        {entry.gameScores.length} game{entry.gameScores.length !== 1 ? 's' : ''} completed
+                      </span>
+                      {hasGameScores && (
+                        <span className="mono text-xs text-mission-muted ml-1">
+                          {isExpanded ? '▲' : '▼'}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Points */}
+                <div className="flex-shrink-0 text-right">
+                  <div className={`mono font-black ${
+                    large ? 'text-4xl' : 'text-xl'
+                  } ${idx === 0 ? 'text-mission-amber' : 'text-white'}`}>
+                    {entry.currentPoints.toLocaleString()}
+                  </div>
+                  <div className={`mono text-mission-muted ${large ? 'text-sm' : 'text-xs'}`}>
+                    CREDITS
+                  </div>
+                </div>
+
+                {/* Flash effect */}
+                {isFlashing && (
+                  <motion.div
+                    initial={{ opacity: 1 }}
+                    animate={{ opacity: 0 }}
+                    transition={{ duration: 1.5 }}
+                    className="absolute inset-0 rounded-lg bg-mission-red/10 pointer-events-none"
+                  />
+                )}
               </div>
 
-              {/* Team Info */}
-              <div className="flex-1 min-w-0">
-                <div
-                  className={`mono font-black text-white tracking-wider truncate ${
-                    large ? 'text-3xl' : 'text-base'
-                  } ${entry.rank === 1 ? 'rank-1' : ''}`}
-                >
-                  {entry.name.toUpperCase()}
-                </div>
-                <div className={`text-mission-muted truncate ${large ? 'text-base mt-1' : 'text-xs'}`}>
-                  CMD: {entry.leaderName}
-                </div>
-              </div>
-
-              {/* Points */}
-              <div className="flex-shrink-0 text-right">
-                <div className={`mono font-black ${
-                  large ? 'text-4xl' : 'text-xl'
-                } ${idx === 0 ? 'text-mission-amber' : 'text-white'}`}>
-                  {entry.currentPoints.toLocaleString()}
-                </div>
-                <div className={`mono text-mission-muted ${large ? 'text-sm' : 'text-xs'}`}>
-                  CREDITS
-                </div>
-              </div>
-
-              {/* Flash effect */}
-              {isFlashing && (
-                <motion.div
-                  initial={{ opacity: 1 }}
-                  animate={{ opacity: 0 }}
-                  transition={{ duration: 1.5 }}
-                  className="absolute inset-0 rounded-lg bg-mission-red/10 pointer-events-none"
-                />
-              )}
+              {/* Expandable game score breakdown */}
+              <AnimatePresence>
+                {isExpanded && hasGameScores && (
+                  <motion.div
+                    key="breakdown"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="overflow-hidden border-t border-mission-border"
+                  >
+                    <div className="px-5 py-3 space-y-2 bg-black/20">
+                      <div className="section-label flex items-center gap-1 mb-1">
+                        <Target className="w-3 h-3" />
+                        GAME SCORE BREAKDOWN
+                      </div>
+                      {entry.gameScores!.map((gs) => (
+                        <div key={gs.gameId} className="flex items-center justify-between text-xs">
+                          <div className="flex flex-col">
+                            <span className="mono font-bold text-white">{gs.gameName}</span>
+                            {gs.location && (
+                              <span className="text-mission-muted">{gs.location}</span>
+                            )}
+                          </div>
+                          <span className="mono font-black text-mission-amber">+{gs.points} pts</span>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )
         })}

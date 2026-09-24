@@ -4,10 +4,31 @@ import { Trophy } from 'lucide-react'
 
 async function getLeaderboard() {
   const teams = await prisma.team.findMany({
-    select: { id: true, name: true, leaderName: true, currentPoints: true },
+    select: {
+      id: true,
+      name: true,
+      leaderName: true,
+      currentPoints: true,
+      transactions: {
+        select: {
+          points: true,
+          game: { select: { id: true, name: true, location: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+      },
+    },
     orderBy: { currentPoints: 'desc' },
   })
-  return teams.map((t, i) => ({ ...t, rank: i + 1 }))
+  return teams.map((t, i) => ({
+    ...t,
+    rank: i + 1,
+    gameScores: t.transactions.map((txn) => ({
+      gameId: txn.game.id,
+      gameName: txn.game.name,
+      location: txn.game.location,
+      points: txn.points,
+    })),
+  }))
 }
 
 export default async function AdminLeaderboardPage() {

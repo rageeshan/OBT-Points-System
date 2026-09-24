@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Terminal, MapPin, Zap, LogOut, CheckCircle, Trophy
+  Terminal, MapPin, Zap, LogOut, CheckCircle, Trophy, Users, Target, Clock
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import PointsModal from '@/components/PointsModal'
@@ -25,12 +25,22 @@ interface FaciInfo {
   } | null
 }
 
+interface AttendedTeam {
+  teamId: string
+  teamName: string
+  leaderName: string
+  totalPoints: number
+  pointsFromThisGame: number
+  scoredAt: string
+}
+
 const QUICK_POINTS = [10, 20, 50, 100]
 
 export default function FaciDashboardPage() {
   const router = useRouter()
   const [faciInfo, setFaciInfo] = useState<FaciInfo | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
+  const [attendedTeams, setAttendedTeams] = useState<AttendedTeam[]>([])
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
   const [customPoints, setCustomPoints] = useState('')
   const [pendingPoints, setPendingPoints] = useState(0)
@@ -41,9 +51,10 @@ export default function FaciDashboardPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [faciRes, teamsRes] = await Promise.all([
+      const [faciRes, teamsRes, attendedRes] = await Promise.all([
         fetch('/api/faci/me'),
         fetch('/api/teams'),
+        fetch('/api/faci/attended'),
       ])
       if (faciRes.status === 401) {
         router.push('/faci/login')
@@ -51,6 +62,7 @@ export default function FaciDashboardPage() {
       }
       if (faciRes.ok) setFaciInfo(await faciRes.json())
       if (teamsRes.ok) setTeams(await teamsRes.json())
+      if (attendedRes.ok) setAttendedTeams(await attendedRes.json())
     } catch {
       toast.error('Failed to load data')
     } finally {
@@ -115,6 +127,9 @@ export default function FaciDashboardPage() {
         )
         setCustomPoints('')
         setPendingPoints(0)
+        // Refresh attended teams
+        const attendedRes = await fetch('/api/faci/attended')
+        if (attendedRes.ok) setAttendedTeams(await attendedRes.json())
         setTimeout(() => setSuccess(null), 4000)
       }
     } catch {
@@ -129,6 +144,9 @@ export default function FaciDashboardPage() {
     await fetch('/api/faci/logout', { method: 'POST' })
     router.push('/faci/login')
   }
+
+  // Teams that have already attended (scored) — for the dropdown label
+  const attendedTeamIds = new Set(attendedTeams.map((t) => t.teamId))
 
   if (loading) {
     return (
@@ -225,7 +243,7 @@ export default function FaciDashboardPage() {
             <option value="">— SELECT TEAM —</option>
             {teams.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name} ({t.currentPoints} credits)
+                {t.name} ({t.currentPoints} credits){attendedTeamIds.has(t.id) ? ' ✓ SCORED' : ''}
               </option>
             ))}
           </select>
@@ -250,6 +268,15 @@ export default function FaciDashboardPage() {
                     </div>
                   </div>
                 </div>
+                {/* Warning if team already scored */}
+                {attendedTeamIds.has(selectedTeam.id) && (
+                  <div className="mt-3 flex items-center gap-2 bg-yellow-900/20 border border-yellow-600/30 rounded-lg px-3 py-2">
+                    <Target className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                    <span className="mono text-xs text-yellow-300">
+                      THIS UNIT HAS ALREADY COMPLETED THIS MISSION — SCORING WILL BE BLOCKED
+                    </span>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -315,6 +342,62 @@ export default function FaciDashboardPage() {
             <div className="mono text-sm text-mission-muted">SELECT A MISSION UNIT TO AWARD CREDITS</div>
           </div>
         )}
+
+        {/* ─── TEAMS ATTENDED ─────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mission-card rounded-xl p-5"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="section-label flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5" />
+              TEAMS ATTENDED
+            </div>
+            <div className="mono text-xs text-mission-muted">
+              {attendedTeams.length} unit{attendedTeams.length !== 1 ? 's' : ''} scored
+            </div>
+          </div>
+
+          {attendedTeams.length === 0 ? (
+            <div className="text-center py-6">
+              <Target className="w-8 h-8 text-mission-muted mx-auto mb-2" />
+              <div className="mono text-xs text-mission-muted">NO TEAMS HAVE BEEN SCORED YET</div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {attendedTeams.map((at, i) => (
+                <motion.div
+                  key={at.teamId}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="flex items-center justify-between bg-black/30 rounded-lg px-4 py-3"
+                >
+                  <div>
+                    <div className="mono font-black text-white text-sm">{at.teamName}</div>
+                    <div className="mono text-xs text-mission-muted">CMD: {at.leaderName}</div>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Clock className="w-3 h-3 text-mission-muted" />
+                      <span className="mono text-xs text-mission-muted">
+                        {new Date(at.scoredAt).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="mono font-black text-mission-amber text-lg">+{at.pointsFromThisGame}</div>
+                    <div className="mono text-xs text-mission-muted">credits</div>
+                    <div className="flex items-center gap-1 justify-end mt-1">
+                      <CheckCircle className="w-3 h-3 text-green-400" />
+                      <span className="mono text-xs text-green-400">DONE</span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </motion.div>
 
         {/* Success Toast */}
         <AnimatePresence>

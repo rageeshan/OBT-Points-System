@@ -6,7 +6,17 @@ import { prisma } from '@/lib/db/prisma'
 export async function GET() {
   try {
     const teams = await prisma.team.findMany({
-      include: { members: true },
+      include: {
+        members: true,
+        transactions: {
+          select: {
+            points: true,
+            createdAt: true,
+            game: { select: { id: true, name: true, location: true } },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
       orderBy: { currentPoints: 'desc' },
     })
     return NextResponse.json(teams)

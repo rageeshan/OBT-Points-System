@@ -71,6 +71,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Mission not found or inactive' }, { status: 404 })
     }
 
+    // ─── ONE-TIME SCORING: Block if team already scored in this game ───────────
+    const existingTxn = await prisma.pointTransaction.findFirst({
+      where: { teamId, gameId },
+    })
+    if (existingTxn) {
+      return NextResponse.json({
+        error: `UNIT ${team.name} already completed mission "${game.name}" — duplicate scoring blocked`,
+      }, { status: 409 })
+    }
+
     // Create transaction and update team points atomically
     const [transaction] = await prisma.$transaction([
       prisma.pointTransaction.create({

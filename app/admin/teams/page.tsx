@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Edit2, Trash2, Users, X, Check, AlertTriangle } from 'lucide-react'
+import { Plus, Edit2, Trash2, Users, X, Check, AlertTriangle, Target } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface TeamMember {
@@ -11,12 +11,19 @@ interface TeamMember {
   isLeader: boolean
 }
 
+interface GameScore {
+  points: number
+  createdAt: string
+  game: { id: string; name: string; location: string | null }
+}
+
 interface Team {
   id: string
   name: string
   leaderName: string
   currentPoints: number
   members: TeamMember[]
+  transactions: GameScore[]
   createdAt: string
 }
 
@@ -189,6 +196,39 @@ export default function TeamsPage() {
                         {team.currentPoints.toLocaleString()}
                       </div>
                     </div>
+
+                    {/* Game Score Breakdown */}
+                    {team.transactions && team.transactions.length > 0 && (
+                      <div className="border-t border-mission-border pt-3 mb-4">
+                        <div className="section-label flex items-center gap-1 mb-2">
+                          <Target className="w-3 h-3" />
+                          GAMES COMPLETED
+                        </div>
+                        <div className="space-y-1.5">
+                          {team.transactions.map((txn, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs">
+                              <div className="flex flex-col min-w-0">
+                                <span className="mono font-bold text-white truncate">{txn.game.name}</span>
+                                {txn.game.location && (
+                                  <span className="text-mission-muted">{txn.game.location}</span>
+                                )}
+                              </div>
+                              <span className="mono font-black text-mission-amber ml-2 flex-shrink-0">+{txn.points}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {team.transactions && team.transactions.length === 0 && (
+                      <div className="border-t border-mission-border pt-3 mb-4">
+                        <div className="section-label flex items-center gap-1 mb-1">
+                          <Target className="w-3 h-3" />
+                          GAMES COMPLETED
+                        </div>
+                        <div className="mono text-xs text-mission-muted">NO GAMES COMPLETED YET</div>
+                      </div>
+                    )}
 
                     {/* Actions */}
                     {deleteConfirm === team.id ? (
