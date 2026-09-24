@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Shield, Lock, Eye, EyeOff, AlertTriangle } from 'lucide-react'
+import { Lock, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -46,13 +46,6 @@ export default function AdminLoginPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <motion.div
-            animate={{ rotate: [0, 360] }}
-            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-            className="w-16 h-16 rounded-full border-2 border-mission-red/40 flex items-center justify-center bg-mission-red/10 mx-auto mb-4"
-          >
-            <Shield className="w-8 h-8 text-mission-red" />
-          </motion.div>
           <div className="classified-badge mx-auto w-fit mb-3">OMEGA CLEARANCE REQUIRED</div>
           <h1 className="mono text-3xl font-black text-white tracking-wider">MISSION CONTROL</h1>
           <p className="mono text-sm text-mission-muted mt-2 tracking-wider">SUPER ADMIN ACCESS</p>

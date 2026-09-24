@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Terminal, Lock, Eye, EyeOff, AlertTriangle, Shield } from 'lucide-react'
+import { Terminal, Lock, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 
 export default function FaciLoginPage() {
   const router = useRouter()
@@ -135,12 +135,9 @@ export default function FaciLoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-mission-border">
-            <div className="flex items-center gap-2 justify-center">
-              <Shield className="w-3 h-3 text-mission-muted" />
-              <div className="mono text-xs text-mission-muted tracking-wider text-center">
-                UNAUTHORIZED ACCESS IS PROHIBITED AND MONITORED
-              </div>
+          <div className="mt-6 pt-6 border-t border-mission-border text-center">
+            <div className="mono text-xs text-mission-muted tracking-wider">
+              UNAUTHORIZED ACCESS IS PROHIBITED AND MONITORED
             </div>
           </div>
         </motion.div>

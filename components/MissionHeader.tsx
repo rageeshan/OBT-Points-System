@@ -12,8 +12,8 @@ interface MissionHeaderProps {
 }
 
 export default function MissionHeader({
-  title = 'MISSION CONTROL',
-  subtitle = 'OUTBOUND TRAINING 2026',
+  title = 'NLDS-26 OBT MISSION CONTROL',
+  subtitle = 'OUTBOUND TRAINING SESSION',
   showNav = true,
 }: MissionHeaderProps) {
   const pathname = usePathname()

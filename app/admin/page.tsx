@@ -61,8 +61,8 @@ export default function AdminDashboardPage() {
     <div className="flex-1 overflow-auto">
       {/* Page Header */}
       <div className="border-b border-mission-border px-6 py-5">
-        <div className="classified-badge mb-2">MISSION CONTROL HQ</div>
-        <h1 className="mono text-2xl font-black text-white tracking-wider">DASHBOARD</h1>
+        <div className="classified-badge mb-2">NLDS'26 OBT MISSION CONTROL HQ</div>
+        <h1 className="mono text-2xl font-black text-white tracking-wider">OBT DASHBOARD</h1>
         <p className="text-mission-muted text-sm mt-1">Mission Control Overview — Real-time operational status</p>
       </div>
 
@@ -73,6 +73,22 @@ export default function AdminDashboardPage() {
           </div>
         ) : (
           <>
+            {/* Quick Actions */}
+            <div className="mission-card rounded-xl p-5">
+              <div className="section-label mb-3">QUICK ACTIONS</div>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/admin/teams" className="btn-ghost py-2 px-4 text-xs flex items-center gap-2">
+                  <Users className="w-3 h-3" />ADD UNIT
+                </Link>
+                <Link href="/admin/facilitators" className="btn-ghost py-2 px-4 text-xs flex items-center gap-2">
+                  <UserCheck className="w-3 h-3" />ADD OFFICER
+                </Link>
+                <Link href="/admin/games" className="btn-ghost py-2 px-4 text-xs flex items-center gap-2">
+                  <Target className="w-3 h-3" />ADD MISSION
+                </Link>
+              </div>
+            </div>
+
             {/* Stat Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {statCards.map((card) => (
@@ -90,8 +106,6 @@ export default function AdminDashboardPage() {
                 </Link>
               ))}
             </div>
-
-            {/* Top Teams */}
             <div className="mission-card rounded-xl overflow-hidden">
               <div className="px-5 py-4 border-b border-mission-border flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -121,24 +135,6 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="mission-card rounded-xl p-5">
-              <div className="section-label mb-3">QUICK ACTIONS</div>
-              <div className="flex flex-wrap gap-3">
-                <Link href="/admin/teams" className="btn-ghost py-2 px-4 text-xs flex items-center gap-2">
-                  <Users className="w-3 h-3" />ADD UNIT
-                </Link>
-                <Link href="/admin/facilitators" className="btn-ghost py-2 px-4 text-xs flex items-center gap-2">
-                  <UserCheck className="w-3 h-3" />ADD OFFICER
-                </Link>
-                <Link href="/admin/games" className="btn-ghost py-2 px-4 text-xs flex items-center gap-2">
-                  <Target className="w-3 h-3" />ADD MISSION
-                </Link>
-                <Link href="/leaderboard" target="_blank" className="btn-amber py-2 px-4 text-xs flex items-center gap-2">
-                  <Trophy className="w-3 h-3" />LIVE LEADERBOARD ↗
-                </Link>
-              </div>
-            </div>
 
             {/* Danger Zone — Reset Points */}
             <div className="rounded-xl border border-red-900/40 bg-red-950/10 p-5">

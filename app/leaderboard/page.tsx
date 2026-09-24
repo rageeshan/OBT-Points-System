@@ -91,18 +91,18 @@ export default function LeaderboardPage() {
               <Shield className="w-4 h-4 text-mission-red" />
             </motion.div>
             <div>
-              <div className="mono text-xs font-bold tracking-widest text-mission-red">MISSION CONTROL</div>
+              <div className="mono text-xs font-bold tracking-widest text-mission-red">NLDS'26 OBT LEADERBOARD</div>
               <div className="mono text-[10px] tracking-wider text-mission-muted">LIVE OPERATIONS</div>
             </div>
           </Link>
         </div>
 
         <div className="flex items-center gap-2">
-            <div className={`w-2.5 h-2.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-mission-muted'}`} />
-            <span className={`mono text-xs font-bold tracking-widest ${isLive ? 'text-green-400' : 'text-mission-muted'}`}>
-              {isLive ? '● LIVE' : '○ OFFLINE'}
-            </span>
-          </div>
+          <div className={`w-2.5 h-2.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-mission-muted'}`} />
+          <span className={`mono text-xs font-bold tracking-widest ${isLive ? 'text-green-400' : 'text-mission-muted'}`}>
+            {isLive ? '● LIVE' : '○ OFFLINE'}
+          </span>
+        </div>
       </header>
 
       <main className="flex-1 flex flex-col px-4 sm:px-8 py-8 max-w-5xl mx-auto w-full">

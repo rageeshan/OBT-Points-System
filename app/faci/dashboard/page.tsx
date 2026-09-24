@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Terminal, MapPin, Zap, LogOut, CheckCircle, Trophy, Users, Target, Clock
+  Terminal, MapPin, Zap, LogOut, CheckCircle, Users, Target, Clock
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import PointsModal from '@/components/PointsModal'
@@ -189,9 +189,6 @@ export default function FaciDashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <a href="/leaderboard" target="_blank" className="btn-ghost py-1.5 px-3 text-xs flex items-center gap-1.5">
-            <Trophy className="w-3 h-3" />RANKING
-          </a>
           <button onClick={handleLogout} className="btn-ghost py-1.5 px-3 text-xs flex items-center gap-1.5">
             <LogOut className="w-3 h-3" />LOGOUT
           </button>

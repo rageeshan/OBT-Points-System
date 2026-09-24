@@ -114,19 +114,18 @@ export default function TeamsPage() {
   return (
     <div className="flex-1 overflow-auto">
       {/* Header */}
-      <div className="border-b border-mission-border px-6 py-5 flex items-center justify-between">
-        <div>
-          <div className="classified-badge mb-2">UNIT REGISTRY</div>
-          <h1 className="mono text-2xl font-black text-white tracking-wider">MISSION UNITS</h1>
-          <p className="text-mission-muted text-sm mt-1">{teams.length} units registered — 5 operatives each</p>
+      <div className="border-b border-mission-border px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="classified-badge mb-1.5">UNIT REGISTRY</div>
+          <h1 className="mono text-xl sm:text-2xl font-black text-white tracking-wider">MISSION UNITS</h1>
+          <p className="text-mission-muted text-xs sm:text-sm mt-0.5">{teams.length} units registered — 5 operatives each</p>
         </div>
-        <button onClick={openCreate} className="btn-mission flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          NEW UNIT
+        <button onClick={openCreate} className="btn-mission flex items-center gap-2 flex-shrink-0 py-2 px-3 sm:py-2.5 sm:px-4 text-xs sm:text-sm">
+          <Plus className="w-4 h-4" /><span className="hidden sm:inline">NEW UNIT</span><span className="sm:hidden">NEW</span>
         </button>
       </div>
 
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="mission-spinner w-10 h-10" />
@@ -280,7 +279,7 @@ export default function TeamsPage() {
               className="fixed inset-0 z-50 flex items-center justify-center p-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="glass-card-bright rounded-xl p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="glass-card-bright rounded-xl p-5 sm:p-8 w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <div className="classified-badge mb-1">{editTeam ? 'MODIFY UNIT' : 'REGISTER UNIT'}</div>
