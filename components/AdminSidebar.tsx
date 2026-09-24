@@ -45,9 +45,9 @@ export default function AdminSidebar() {
   }
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Logo */}
-      <div className="p-6 border-b border-mission-border">
+      <div className="flex-shrink-0 p-6 border-b border-mission-border">
         <div className="flex items-center gap-3">
           <motion.div
             animate={{ rotate: [0, 360] }}
@@ -66,8 +66,8 @@ export default function AdminSidebar() {
         </div>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+      {/* Nav — scrollable but bounded so logout always shows */}
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto min-h-0">
         {navItems.map((item) => {
           const active = isActive(item)
           return (
@@ -85,8 +85,8 @@ export default function AdminSidebar() {
         })}
       </nav>
 
-      {/* Bottom */}
-      <div className="p-4 border-t border-mission-border space-y-2">
+      {/* Bottom — always pinned */}
+      <div className="flex-shrink-0 p-4 border-t border-mission-border space-y-2">
         <div className="mission-card rounded-lg p-3">
           <div className="section-label">LOGGED IN AS</div>
           <div className="mono text-sm font-bold text-white">SUPER ADMIN</div>

@@ -91,14 +91,13 @@ export default function MissionsSection({ games }: { games: Game[] }) {
                 <div className="flex-1 min-w-0">
                   <div className="section-label text-[9px]">MISSION OFFICER</div>
                   {game.facilitators.length > 0 ? (
-                    <div className="flex flex-wrap gap-1 mt-0.5">
+                    <div className="flex flex-col gap-1 mt-0.5">
                       {game.facilitators.map((f) => (
                         <span
                           key={f.faciId}
-                          className="mono text-xs text-green-400 border border-green-900/40 bg-green-900/10 px-2 py-0.5 rounded"
-                          title={f.name}
+                          className="text-sm text-green-400 font-semibold"
                         >
-                          {f.faciId}
+                          {f.name}
                         </span>
                       ))}
                     </div>

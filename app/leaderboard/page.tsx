@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@supabase/supabase-js'
-import { Trophy, Shield, Zap, Clock } from 'lucide-react'
+import { Trophy, Shield, Zap } from 'lucide-react'
 import Link from 'next/link'
 
 interface LeaderboardEntry {
@@ -29,7 +29,6 @@ export default function LeaderboardPage() {
   const [isLive, setIsLive] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [flashIds, setFlashIds] = useState<Set<string>>(new Set())
-  const [time, setTime] = useState(new Date())
 
   const fetchLeaderboard = useCallback(async () => {
     try {
@@ -49,12 +48,9 @@ export default function LeaderboardPage() {
   useEffect(() => {
     fetchLeaderboard()
 
-    // Clock
-    const clockInterval = setInterval(() => setTime(new Date()), 1000)
-
     // Supabase realtime
     if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
-      return () => clearInterval(clockInterval)
+      return
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnon)
@@ -77,7 +73,6 @@ export default function LeaderboardPage() {
       .subscribe((status) => setIsLive(status === 'SUBSCRIBED'))
 
     return () => {
-      clearInterval(clockInterval)
       supabase.removeChannel(channel)
     }
   }, [fetchLeaderboard])
@@ -102,19 +97,12 @@ export default function LeaderboardPage() {
           </Link>
         </div>
 
-        <div className="flex items-center gap-6">
-          {/* Live indicator */}
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
             <div className={`w-2.5 h-2.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-mission-muted'}`} />
             <span className={`mono text-xs font-bold tracking-widest ${isLive ? 'text-green-400' : 'text-mission-muted'}`}>
               {isLive ? '● LIVE' : '○ OFFLINE'}
             </span>
           </div>
-          {/* Clock */}
-          <div className="mono text-lg font-bold text-mission-amber tracking-widest">
-            {time.toLocaleTimeString('en-GB')}
-          </div>
-        </div>
       </header>
 
       <main className="flex-1 flex flex-col px-4 sm:px-8 py-8 max-w-5xl mx-auto w-full">
@@ -144,7 +132,6 @@ export default function LeaderboardPage() {
           />
           {lastUpdated && (
             <div className="flex items-center justify-center gap-2 mt-3">
-              <Clock className="w-3 h-3 text-mission-muted" />
               <span className="mono text-xs text-mission-muted">
                 Last updated: {lastUpdated.toLocaleTimeString()}
               </span>
