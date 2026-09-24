@@ -1,0 +1,463 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* ─── Base Reset ─────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #080810;
+  color: #f8f8ff;
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* ─── Mission Grid Background ────────────────────────────── */
+.mission-bg {
+  background-color: #080810;
+  background-image:
+    linear-gradient(rgba(220, 38, 38, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(220, 38, 38, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  position: relative;
+}
+
+.mission-bg::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(220, 38, 38, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(217, 119, 6, 0.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Scanline Effect ────────────────────────────────────── */
+.scanline {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.4), transparent);
+  animation: scan 6s linear infinite;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ─── Glass Cards ────────────────────────────────────────── */
+.glass-card {
+  background: rgba(17, 17, 34, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(30, 30, 58, 0.8);
+}
+
+.glass-card-bright {
+  background: rgba(22, 22, 40, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
+/* ─── Mission Cards ──────────────────────────────────────── */
+.mission-card {
+  background: rgba(13, 13, 26, 0.95);
+  border: 1px solid rgba(30, 30, 58, 0.9);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.mission-card:hover {
+  border-color: rgba(220, 38, 38, 0.4);
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.1);
+}
+
+/* ─── Red Glow Effect ────────────────────────────────────── */
+.red-glow {
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
+}
+
+.amber-glow {
+  box-shadow: 0 0 20px rgba(217, 119, 6, 0.4);
+}
+
+.green-glow {
+  box-shadow: 0 0 20px rgba(22, 163, 74, 0.4);
+}
+
+/* ─── Mono Terminal Text ─────────────────────────────────── */
+.mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ─── Classified Badge ───────────────────────────────────── */
+.classified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid rgba(220, 38, 38, 0.6);
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: #dc2626;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+}
+
+/* ─── Status Indicators ──────────────────────────────────── */
+.status-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #22c55e;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.1em;
+}
+
+.status-active::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  animation: pulse-green 2s ease-in-out infinite;
+}
+
+.status-inactive {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b6b8a;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.1em;
+}
+
+.status-inactive::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #6b6b8a;
+}
+
+@keyframes pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(34, 197, 94, 0); }
+}
+
+/* ─── Rank Badges ────────────────────────────────────────── */
+.rank-1 { color: #f59e0b; text-shadow: 0 0 10px rgba(245, 158, 11, 0.8); }
+.rank-2 { color: #94a3b8; text-shadow: 0 0 10px rgba(148, 163, 184, 0.5); }
+.rank-3 { color: #cd7c2e; text-shadow: 0 0 10px rgba(205, 124, 46, 0.5); }
+
+/* ─── Custom Scrollbar ───────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0d0d1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(220, 38, 38, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(220, 38, 38, 0.6);
+}
+
+/* ─── Form Inputs ────────────────────────────────────────── */
+.mission-input {
+  background: rgba(8, 8, 16, 0.8);
+  border: 1px solid rgba(30, 30, 58, 0.8);
+  color: #f8f8ff;
+  border-radius: 4px;
+  padding: 10px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  width: 100%;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.mission-input:focus {
+  border-color: rgba(220, 38, 38, 0.6);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1);
+}
+
+.mission-input::placeholder {
+  color: rgba(107, 107, 138, 0.6);
+}
+
+.mission-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Buttons ────────────────────────────────────────────── */
+.btn-mission {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-mission:hover {
+  background: #ef4444;
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
+}
+
+.btn-mission:active {
+  transform: scale(0.98);
+}
+
+.btn-mission:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: transparent;
+  color: #f8f8ff;
+  border: 1px solid rgba(30, 30, 58, 0.8);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-ghost:hover {
+  border-color: rgba(220, 38, 38, 0.4);
+  color: #dc2626;
+}
+
+.btn-amber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #d97706;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-amber:hover {
+  background: #f59e0b;
+  box-shadow: 0 0 20px rgba(217, 119, 6, 0.4);
+}
+
+/* ─── Section Labels ─────────────────────────────────────── */
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: rgba(107, 107, 138, 0.8);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+/* ─── Terminal text animation ────────────────────────────── */
+.terminal-text::after {
+  content: '█';
+  animation: blink 1s step-end infinite;
+  color: #dc2626;
+}
+
+/* ─── Top 3 leaderboard effects ──────────────────────────── */
+.rank-gold {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05));
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.rank-silver {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.1), rgba(100, 116, 139, 0.05));
+  border-color: rgba(148, 163, 184, 0.3) !important;
+}
+
+.rank-bronze {
+  background: linear-gradient(135deg, rgba(205, 124, 46, 0.1), rgba(161, 86, 24, 0.05));
+  border-color: rgba(205, 124, 46, 0.3) !important;
+}
+
+/* ─── Corner accents ─────────────────────────────────────── */
+.corner-accent {
+  position: relative;
+}
+
+.corner-accent::before,
+.corner-accent::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: rgba(220, 38, 38, 0.6);
+  border-style: solid;
+}
+
+.corner-accent::before {
+  top: -1px;
+  left: -1px;
+  border-width: 2px 0 0 2px;
+}
+
+.corner-accent::after {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 2px 2px 0;
+}
+
+/* ─── Loading State ──────────────────────────────────────── */
+.mission-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(220, 38, 38, 0.2);
+  border-top-color: #dc2626;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Sidebar ────────────────────────────────────────────── */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  color: rgba(248, 248, 255, 0.6);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: all 0.2s;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.sidebar-link:hover {
+  background: rgba(220, 38, 38, 0.08);
+  color: #f8f8ff;
+}
+
+.sidebar-link.active {
+  background: rgba(220, 38, 38, 0.15);
+  color: #ef4444;
+  border-left: 2px solid #dc2626;
+}
+
+/* ─── Table styles ───────────────────────────────────────── */
+.mission-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.mission-table th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(107, 107, 138, 0.8);
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(30, 30, 58, 0.8);
+}
+
+.mission-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(30, 30, 58, 0.4);
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.mission-table tr:hover td {
+  background: rgba(220, 38, 38, 0.03);
+}
+
+/* ─── Notification Toast ─────────────────────────────────── */
+.toast-mission {
+  background: rgba(13, 13, 26, 0.98) !important;
+  border: 1px solid rgba(220, 38, 38, 0.4) !important;
+  color: #f8f8ff !important;
+  border-radius: 6px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 13px !important;
+}
+
+/* ─── Responsive sidebar ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar-desktop {
+    display: none;
+  }
+}
+
+/* ─── Leaderboard large screen ───────────────────────────── */
+@media (min-width: 1920px) {
+  .leaderboard-rank {
+    font-size: 5rem;
+  }
+  .leaderboard-name {
+    font-size: 3.5rem;
+  }
+  .leaderboard-points {
+    font-size: 3rem;
+  }
+}

@@ -1,0 +1,87 @@
+// Prisma Schema — OBT Mission Control System
+// Supabase PostgreSQL Backend
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Team {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  leaderName    String   @map("leader_name")
+  currentPoints Int      @default(0) @map("current_points")
+  rank          Int?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  members      TeamMember[]
+  transactions PointTransaction[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String   @map("team_id")
+  name      String
+  isLeader  Boolean  @default(false) @map("is_leader")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("team_members")
+}
+
+model Game {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  location    String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  facilitators Facilitator[]
+  transactions PointTransaction[]
+
+  @@map("games")
+}
+
+model Facilitator {
+  id           String   @id @default(cuid())
+  faciId       String   @unique @map("faci_id")
+  name         String
+  passwordHash String   @map("password_hash")
+  gameId       String?  @map("game_id")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  game         Game?              @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  transactions PointTransaction[]
+
+  @@map("facilitators")
+}
+
+model PointTransaction {
+  id            String   @id @default(cuid())
+  txnId         String   @unique @map("txn_id")
+  teamId        String   @map("team_id")
+  gameId        String   @map("game_id")
+  facilitatorId String   @map("facilitator_id")
+  points        Int
+  note          String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  team        Team        @relation(fields: [teamId], references: [id])
+  game        Game        @relation(fields: [gameId], references: [id])
+  facilitator Facilitator @relation(fields: [facilitatorId], references: [id])
+
+  @@map("point_transactions")
+}
