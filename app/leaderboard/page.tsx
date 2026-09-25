@@ -4,8 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@supabase/supabase-js'
 import { Trophy, Shield, Zap } from 'lucide-react'
-import Link from 'next/link'
-import Image from 'next/image'
+import MissionHeader from '@/components/MissionHeader'
 
 interface LeaderboardEntry {
   id: string
@@ -80,38 +79,19 @@ export default function LeaderboardPage() {
 
   return (
     <div className="mission-bg min-h-screen flex flex-col">
-      {/* Top Bar */}
-      <header className="border-b border-mission-border px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-3 group">
-            <motion.div
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-              className="w-9 h-9 rounded-full border border-mission-red/40 flex items-center justify-center bg-black/40 overflow-hidden p-1 group-hover:border-mission-red/70 transition-colors flex-shrink-0"
-            >
-              <Image
-                src="/icon.png"
-                alt="NLDS'26 OBT"
-                width={36}
-                height={36}
-                className="w-full h-full object-contain"
-                priority
-              />
-            </motion.div>
-            <div>
-              <div className="mono text-xs font-bold tracking-widest text-mission-red">NLDS&apos;26 OBT LEADERBOARD</div>
-              <div className="mono text-[10px] tracking-wider text-mission-muted">LIVE OPERATIONS</div>
-            </div>
-          </Link>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className={`w-2.5 h-2.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-mission-muted'}`} />
-          <span className={`mono text-xs font-bold tracking-widest ${isLive ? 'text-green-400' : 'text-mission-muted'}`}>
-            {isLive ? '● LIVE' : '○ OFFLINE'}
-          </span>
-        </div>
-      </header>
+      {/* Shared Navbar */}
+      <MissionHeader
+        title="NLDS'26 OBT LEADERBOARD"
+        subtitle="LIVE OPERATIONS"
+        rightSlot={
+          <div className="flex items-center gap-2">
+            <div className={`w-2.5 h-2.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-mission-muted'}`} />
+            <span className={`mono text-xs font-bold tracking-widest ${isLive ? 'text-green-400' : 'text-mission-muted'}`}>
+              {isLive ? '● LIVE' : '○ OFFLINE'}
+            </span>
+          </div>
+        }
+      />
 
       <main className="flex-1 flex flex-col px-4 sm:px-8 py-8 max-w-5xl mx-auto w-full">
         {/* Title */}

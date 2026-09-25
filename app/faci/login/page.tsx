@@ -54,7 +54,7 @@ export default function FaciLoginPage() {
             <Terminal className="w-8 h-8 text-mission-amber" />
           </motion.div>
           <div className="classified-badge mx-auto w-fit mb-3">AGENT AUTHENTICATION</div>
-          <h1 className="mono text-3xl font-black text-white tracking-wider">AGENT LOGIN</h1>
+          <h1 className="mono text-3xl font-black text-white tracking-wider">FACI LOGIN</h1>
           <p className="mono text-sm text-mission-muted mt-2 tracking-wider">MISSION OFFICER ACCESS PORTAL</p>
         </motion.div>
 
