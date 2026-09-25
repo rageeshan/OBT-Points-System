@@ -5,6 +5,9 @@ import MissionHeader from '@/components/MissionHeader'
 import MissionsSection from '@/components/MissionsSection'
 import FacilitatorsSection from '@/components/FacilitatorsSection'
 
+// Always fetch fresh data — disables Vercel's static page cache
+export const dynamic = 'force-dynamic'
+
 async function getGames() {
   try {
     return await prisma.game.findMany({

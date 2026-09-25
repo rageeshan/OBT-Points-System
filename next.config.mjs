@@ -2,7 +2,10 @@
 const nextConfig = {
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3000'],
+      allowedOrigins: [
+        'localhost:3000',
+        'nlds-obt-points.vercel.app',
+      ],
     },
   },
   images: {
