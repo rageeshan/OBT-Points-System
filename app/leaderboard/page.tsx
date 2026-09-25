@@ -1,37 +1,24 @@
-'use client'
-
-import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@supabase/supabase-js'
 import { Trophy, Shield, Zap } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
-
-interface LeaderboardEntry {
   id: string
   name: string
   leaderName: string
   currentPoints: number
   rank: number
 }
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-
-const rankConfig = [
   { bg: 'from-yellow-900/30 to-yellow-950/20', border: 'border-yellow-500/40', rankColor: 'text-yellow-400', pointColor: 'text-yellow-300', prefix: '◈' },
   { bg: 'from-slate-700/30 to-slate-800/20', border: 'border-slate-400/40', rankColor: 'text-slate-300', pointColor: 'text-slate-200', prefix: '◈' },
   { bg: 'from-orange-900/30 to-orange-950/20', border: 'border-orange-500/40', rankColor: 'text-orange-400', pointColor: 'text-orange-300', prefix: '◈' },
 ]
-
-export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [isLive, setIsLive] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [flashIds, setFlashIds] = useState<Set<string>>(new Set())
-
-  const fetchLeaderboard = useCallback(async () => {
     try {
       const res = await fetch('/api/leaderboard', { cache: 'no-store' })
       if (res.ok) {
@@ -45,16 +32,10 @@ export default function LeaderboardPage() {
       setLoading(false)
     }
   }, [])
-
-  useEffect(() => {
     fetchLeaderboard()
-
-    // Supabase realtime
     if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
       return
     }
-
-    const supabase = createClient(supabaseUrl, supabaseAnon)
     const channel = supabase
       .channel('leaderboard-page')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'point_transactions' }, async (payload) => {
@@ -72,13 +53,9 @@ export default function LeaderboardPage() {
         }
       })
       .subscribe((status) => setIsLive(status === 'SUBSCRIBED'))
-
-    return () => {
       supabase.removeChannel(channel)
     }
   }, [fetchLeaderboard])
-
-  return (
     <div className="mission-bg min-h-screen flex flex-col">
       {/* Top Bar */}
       <header className="border-b border-mission-border px-6 py-4 flex items-center justify-between">
@@ -104,16 +81,12 @@ export default function LeaderboardPage() {
             </div>
           </Link>
         </div>
-
-        <div className="flex items-center gap-2">
           <div className={`w-2.5 h-2.5 rounded-full ${isLive ? 'bg-green-500 animate-pulse' : 'bg-mission-muted'}`} />
           <span className={`mono text-xs font-bold tracking-widest ${isLive ? 'text-green-400' : 'text-mission-muted'}`}>
             {isLive ? '● LIVE' : '○ OFFLINE'}
           </span>
         </div>
       </header>
-
-      <main className="flex-1 flex flex-col px-4 sm:px-8 py-8 max-w-5xl mx-auto w-full">
         {/* Title */}
         <div className="text-center mb-10">
           <motion.div
@@ -146,8 +119,6 @@ export default function LeaderboardPage() {
             </div>
           )}
         </div>
-
-        {/* Leaderboard */}
         {loading ? (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
@@ -190,8 +161,6 @@ export default function LeaderboardPage() {
                         />
                       )}
                     </AnimatePresence>
-
-                    {/* Rank */}
                     <div className="flex-shrink-0 w-16 sm:w-20 text-center">
                       {idx < 3 ? (
                         <div className="flex flex-col items-center gap-1">
@@ -206,8 +175,6 @@ export default function LeaderboardPage() {
                         </div>
                       )}
                     </div>
-
-                    {/* Team info */}
                     <div className="flex-1 min-w-0">
                       <div className={`mono font-black text-xl sm:text-3xl tracking-wider truncate ${idx === 0 ? 'text-yellow-300' : 'text-white'}`}>
                         {entry.name}
@@ -216,16 +183,12 @@ export default function LeaderboardPage() {
                         CMD: {entry.leaderName}
                       </div>
                     </div>
-
-                    {/* Points */}
                     <div className="flex-shrink-0 text-right">
                       <div className={`mono font-black text-3xl sm:text-5xl ${cfg?.pointColor || 'text-white'}`}>
                         {entry.currentPoints.toLocaleString()}
                       </div>
                       <div className="mono text-xs text-mission-muted">CREDITS</div>
                     </div>
-
-                    {/* Update flash badge */}
                     {isFlashing && (
                       <motion.div
                         initial={{ opacity: 1, scale: 0.8 }}
@@ -240,8 +203,6 @@ export default function LeaderboardPage() {
                 )
               })}
             </AnimatePresence>
-
-            {entries.length === 0 && (
               <div className="mission-card rounded-xl p-16 text-center">
                 <Shield className="w-12 h-12 text-mission-muted mx-auto mb-4" />
                 <div className="mono text-mission-muted">NO MISSION UNITS REGISTERED</div>
@@ -250,8 +211,6 @@ export default function LeaderboardPage() {
           </div>
         )}
       </main>
-
-      {/* Footer */}
       <footer className="border-t border-mission-border py-4 text-center">
         <div className="mono text-xs text-mission-muted tracking-widest">
           MISSION CONTROL LIVE FEED — OBT 2026 — ALL DATA IS CLASSIFIED

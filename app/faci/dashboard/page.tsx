@@ -1,6 +1,3 @@
-'use client'
-
-import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -9,14 +6,10 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import PointsModal from '@/components/PointsModal'
-
-interface Team {
   id: string
   name: string
   currentPoints: number
 }
-
-interface FaciInfo {
   faciId: string
   name: string
   game: {
@@ -25,8 +18,6 @@ interface FaciInfo {
     location?: string
   } | null
 }
-
-interface AttendedTeam {
   teamId: string
   teamName: string
   leaderName: string
@@ -34,10 +25,6 @@ interface AttendedTeam {
   pointsFromThisGame: number
   scoredAt: string
 }
-
-const QUICK_POINTS = [10, 20, 50, 100]
-
-export default function FaciDashboardPage() {
   const router = useRouter()
   const [faciInfo, setFaciInfo] = useState<FaciInfo | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
@@ -49,8 +36,6 @@ export default function FaciDashboardPage() {
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [success, setSuccess] = useState<{ teamName: string; points: number } | null>(null)
-
-  const loadData = useCallback(async () => {
     try {
       const [faciRes, teamsRes, attendedRes] = await Promise.all([
         fetch('/api/faci/me'),
@@ -70,16 +55,10 @@ export default function FaciDashboardPage() {
       setLoading(false)
     }
   }, [router])
-
-  useEffect(() => { loadData() }, [loadData])
-
-  function handleQuickPoints(pts: number) {
     setPendingPoints(pts)
     setCustomPoints('')
     setShowModal(true)
   }
-
-  function handleCustomPoints() {
     const pts = parseInt(customPoints, 10)
     if (!pts || pts <= 0) {
       toast.error('Enter a valid number of credits')
@@ -92,11 +71,7 @@ export default function FaciDashboardPage() {
     setPendingPoints(pts)
     setShowModal(true)
   }
-
-  async function handleConfirmPoints() {
     if (!selectedTeam || !faciInfo?.game || !pendingPoints) return
-
-    setSubmitting(true)
     try {
       const res = await fetch('/api/points', {
         method: 'POST',
@@ -108,8 +83,6 @@ export default function FaciDashboardPage() {
         }),
       })
       const data = await res.json()
-
-      if (!res.ok) {
         toast.error(data.error || 'TRANSMISSION FAILED')
         setShowModal(false)
       } else {
@@ -140,16 +113,10 @@ export default function FaciDashboardPage() {
       setSubmitting(false)
     }
   }
-
-  async function handleLogout() {
     await fetch('/api/faci/logout', { method: 'POST' })
     router.push('/faci/login')
   }
-
-  // Teams that have already attended (scored) — for the dropdown label
   const attendedTeamIds = new Set(attendedTeams.map((t) => t.teamId))
-
-  if (loading) {
     return (
       <div className="mission-bg min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -159,8 +126,6 @@ export default function FaciDashboardPage() {
       </div>
     )
   }
-
-  if (!faciInfo?.game) {
     return (
       <div className="mission-bg min-h-screen flex items-center justify-center px-4">
         <div className="mission-card rounded-xl p-8 max-w-md text-center">
@@ -175,8 +140,6 @@ export default function FaciDashboardPage() {
       </div>
     )
   }
-
-  return (
     <div className="mission-bg min-h-screen">
       {/* Header */}
       <header className="border-b border-mission-border px-4 py-3 flex items-center justify-between">
@@ -201,8 +164,6 @@ export default function FaciDashboardPage() {
           </button>
         </div>
       </header>
-
-      <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
         {/* Mission Info */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -227,8 +188,6 @@ export default function FaciDashboardPage() {
             <span className="status-active text-xs">OPERATION ACTIVE</span>
           </div>
         </motion.div>
-
-        {/* Team Select */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -251,8 +210,6 @@ export default function FaciDashboardPage() {
               </option>
             ))}
           </select>
-
-          <AnimatePresence>
             {selectedTeam && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
@@ -285,8 +242,6 @@ export default function FaciDashboardPage() {
             )}
           </AnimatePresence>
         </motion.div>
-
-        {/* Points Buttons */}
         <AnimatePresence>
           {selectedTeam && (
             <motion.div
@@ -311,8 +266,6 @@ export default function FaciDashboardPage() {
                   ))}
                 </div>
               </div>
-
-              {/* Custom Points */}
               <div className="mission-card rounded-xl p-5">
                 <div className="section-label mb-3">CUSTOM CREDITS</div>
                 <div className="flex gap-3">
@@ -339,15 +292,11 @@ export default function FaciDashboardPage() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {!selectedTeam && (
           <div className="mission-card rounded-xl p-8 text-center">
             <Zap className="w-10 h-10 text-mission-muted mx-auto mb-3" />
             <div className="mono text-sm text-mission-muted">SELECT A MISSION UNIT TO AWARD CREDITS</div>
           </div>
         )}
-
-        {/* ─── TEAMS ATTENDED ─────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -363,8 +312,6 @@ export default function FaciDashboardPage() {
               {attendedTeams.length} unit{attendedTeams.length !== 1 ? 's' : ''} scored
             </div>
           </div>
-
-          {attendedTeams.length === 0 ? (
             <div className="text-center py-6">
               <Target className="w-8 h-8 text-mission-muted mx-auto mb-2" />
               <div className="mono text-xs text-mission-muted">NO TEAMS HAVE BEEN SCORED YET</div>
@@ -402,8 +349,6 @@ export default function FaciDashboardPage() {
             </div>
           )}
         </motion.div>
-
-        {/* Success Toast */}
         <AnimatePresence>
           {success && (
             <motion.div
@@ -423,8 +368,6 @@ export default function FaciDashboardPage() {
           )}
         </AnimatePresence>
       </main>
-
-      {/* Confirm Modal */}
       {faciInfo.game && selectedTeam && (
         <PointsModal
           isOpen={showModal}
