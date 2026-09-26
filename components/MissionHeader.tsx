@@ -38,7 +38,7 @@ export default function MissionHeader({
           {/* Logo / Title */}
           <Link
             href="/"
-            className="flex items-center gap-3 group flex-shrink-0"
+            className="flex items-center gap-3 group min-w-0 shrink"
             onClick={() => setMenuOpen(false)}
           >
             <motion.div
@@ -55,11 +55,11 @@ export default function MissionHeader({
                 priority
               />
             </motion.div>
-            <div>
-              <div className="mono text-xs font-bold tracking-widest text-mission-red leading-none">
+            <div className="min-w-0 flex-1">
+              <div className="mono text-xs font-bold tracking-widest text-mission-red leading-none truncate max-w-[160px] sm:max-w-none">
                 {title}
               </div>
-              <div className="mono text-[9px] tracking-wider text-mission-muted leading-none mt-0.5">
+              <div className="mono text-[9px] tracking-wider text-mission-muted leading-none mt-0.5 truncate max-w-[160px] sm:max-w-none">
                 {subtitle}
               </div>
             </div>
