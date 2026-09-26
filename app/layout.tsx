@@ -3,7 +3,7 @@ import './globals.css'
 import { Toaster } from 'react-hot-toast'
 
 export const metadata: Metadata = {
-  title: 'Mission Control — OBT Points System',
+  title: `NLDS'26 — OBT Points System`,
   description: 'Outbound Training 2026 — Live Mission Ranking and Points Management System',
   keywords: ['OBT', 'Outbound Training', 'Mission Control', 'Points System'],
   authors: [{ name: 'Mission Control HQ' }],
