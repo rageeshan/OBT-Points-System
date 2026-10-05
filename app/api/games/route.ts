@@ -9,7 +9,11 @@ export async function GET() {
       include: { facilitators: { select: { id: true, faciId: true, name: true, isActive: true } } },
       orderBy: { createdAt: 'asc' },
     })
-    return NextResponse.json(games)
+    return NextResponse.json(games, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=2, stale-while-revalidate=4',
+      },
+    })
   } catch {
     return NextResponse.json({ error: 'Failed to fetch games' }, { status: 500 })
   }
@@ -21,7 +25,7 @@ export async function POST(req: NextRequest) {
     const session = await getAdminSession()
     if (!session) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
 
-    const { name, description, location, isActive } = await req.json()
+    const { name, description, location, isActive, maxPoints } = await req.json()
 
     if (!name) return NextResponse.json({ error: 'Mission name is required' }, { status: 400 })
 
@@ -31,6 +35,7 @@ export async function POST(req: NextRequest) {
         description: description?.trim() || null,
         location: location?.trim() || null,
         isActive: isActive ?? true,
+        maxPoints: maxPoints ? parseInt(maxPoints, 10) : null,
       },
     })
 

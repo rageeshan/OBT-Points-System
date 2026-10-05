@@ -12,7 +12,7 @@ export async function PATCH(
   if (!session) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
 
   try {
-    const { name, description, location, isActive } = await req.json()
+    const { name, description, location, isActive, maxPoints } = await req.json()
     const game = await prisma.game.update({
       where: { id },
       data: {
@@ -20,6 +20,7 @@ export async function PATCH(
         ...(description !== undefined && { description: description?.trim() || null }),
         ...(location !== undefined && { location: location?.trim() || null }),
         ...(isActive !== undefined && { isActive }),
+        ...(maxPoints !== undefined && { maxPoints: maxPoints ? parseInt(maxPoints, 10) : null }),
       },
     })
     return NextResponse.json(game)

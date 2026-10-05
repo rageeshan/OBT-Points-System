@@ -12,7 +12,7 @@ export async function GET() {
   try {
     const facilitator = await prisma.facilitator.findUnique({
       where: { id: session.facilitatorId },
-      include: { game: { select: { id: true, name: true, location: true } } },
+      include: { game: { select: { id: true, name: true, location: true, maxPoints: true, isLive: true } } },
     })
 
     if (!facilitator || !facilitator.isActive) {

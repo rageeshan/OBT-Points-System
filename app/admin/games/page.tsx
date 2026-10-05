@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Edit2, Trash2, Target, X, Check, AlertTriangle, MapPin, Users } from 'lucide-react'
+import { Plus, Edit2, Trash2, Target, X, Check, AlertTriangle, MapPin, Users, Trophy } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface Game {
@@ -11,19 +11,20 @@ interface Game {
   name: string
   description?: string
   location?: string
+  maxPoints?: number | null
   isActive: boolean
   facilitators?: { id: string; faciId: string; name: string; isActive: boolean }[]
   createdAt: string
 }
 
-const emptyForm = { name: '', description: '', location: '', isActive: true }
+const emptyForm = { name: '', description: '', location: '', maxPoints: '', isActive: true }
 
 export default function GamesPage() {
   const [games, setGames] = useState<Game[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editGame, setEditGame] = useState<Game | null>(null)
-  const [form, setForm] = useState<{ name: string; description: string; location: string; isActive: boolean }>(emptyForm)
+  const [form, setForm] = useState<{ name: string; description: string; location: string; maxPoints: string; isActive: boolean }>(emptyForm)
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
@@ -47,7 +48,13 @@ export default function GamesPage() {
 
   function openEdit(game: Game) {
     setEditGame(game)
-    setForm({ name: game.name, description: game.description || '', location: game.location || '', isActive: game.isActive })
+    setForm({
+      name: game.name,
+      description: game.description || '',
+      location: game.location || '',
+      maxPoints: game.maxPoints != null ? String(game.maxPoints) : '',
+      isActive: game.isActive,
+    })
     setShowModal(true)
   }
 
@@ -60,7 +67,10 @@ export default function GamesPage() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          maxPoints: form.maxPoints ? parseInt(form.maxPoints, 10) : null,
+        }),
       })
       const data = await res.json()
       if (!res.ok) toast.error(data.error || 'Operation failed')
@@ -162,11 +172,24 @@ export default function GamesPage() {
                     </div>
                   )}
 
-                  <div className="mb-3">
-                    <div className="section-label">LOCATION</div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-3 h-3 text-mission-amber" />
-                      <span className="text-white text-sm">{game.location || '— UNSET —'}</span>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <div className="section-label">LOCATION</div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3 h-3 text-mission-amber" />
+                        <span className="text-white text-sm">{game.location || '— UNSET —'}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="section-label">MAX POINTS</div>
+                      <div className="flex items-center gap-2">
+                        <Trophy className="w-3 h-3 text-mission-amber" />
+                        {game.maxPoints != null ? (
+                          <span className="mono font-black text-mission-amber text-sm">{game.maxPoints.toLocaleString()}</span>
+                        ) : (
+                          <span className="text-mission-muted text-sm">— UNSET —</span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -229,7 +252,7 @@ export default function GamesPage() {
             <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
-              <div className="glass-card-bright rounded-xl p-5 sm:p-8 w-full max-w-md">
+              <div className="glass-card-bright rounded-xl p-5 sm:p-8 w-full max-w-md max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <div className="classified-badge mb-1">{editGame ? 'MODIFY MISSION' : 'NEW MISSION'}</div>
@@ -252,6 +275,25 @@ export default function GamesPage() {
                     <label className="section-label block mb-1">LOCATION / ZONE</label>
                     <input type="text" value={form.location} onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
                       className="mission-input" placeholder="e.g. ZONE A" />
+                  </div>
+                  <div>
+                    <label className="section-label block mb-1">
+                      <span className="flex items-center gap-1.5">
+                        <Trophy className="w-3 h-3 text-mission-amber" />
+                        MAX POINTS
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      value={form.maxPoints}
+                      onChange={(e) => setForm((f) => ({ ...f, maxPoints: e.target.value }))}
+                      className="mission-input"
+                      placeholder="e.g. 100 (leave blank for unlimited)"
+                      min="1"
+                    />
+                    <p className="text-mission-muted text-xs mt-1">
+                      Facilitators can award up to this many points for this mission.
+                    </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <input type="checkbox" id="isActive" checked={form.isActive}

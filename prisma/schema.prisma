@@ -43,7 +43,9 @@ model Game {
   name        String   @unique
   description String?
   location    String?
+  maxPoints   Int?     @map("max_points")
   isActive    Boolean  @default(true) @map("is_active")
+  isLive      Boolean  @default(false) @map("is_live")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

@@ -1,14 +1,16 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Terminal, MapPin, Zap, LogOut, CheckCircle, Users, Target, Clock
+  Terminal, MapPin, Zap, LogOut, CheckCircle, Users, Target, Clock, Trophy, AlertTriangle, Radio,
+  ChevronDown, Search, Check, X, Lock
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import PointsModal from '@/components/PointsModal'
+import { supabase } from '@/lib/supabase/client'
 
 interface Team {
   id: string
@@ -23,6 +25,8 @@ interface FaciInfo {
     id: string
     name: string
     location?: string
+    maxPoints?: number | null
+    isLive?: boolean
   } | null
 }
 
@@ -35,20 +39,22 @@ interface AttendedTeam {
   scoredAt: string
 }
 
-const QUICK_POINTS = [10, 20, 50, 100]
-
 export default function FaciDashboardPage() {
   const router = useRouter()
   const [faciInfo, setFaciInfo] = useState<FaciInfo | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [attendedTeams, setAttendedTeams] = useState<AttendedTeam[]>([])
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [teamSearch, setTeamSearch] = useState('')
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const [customPoints, setCustomPoints] = useState('')
   const [pendingPoints, setPendingPoints] = useState(0)
   const [showModal, setShowModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [success, setSuccess] = useState<{ teamName: string; points: number } | null>(null)
+  const [goingLive, setGoingLive] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
@@ -73,6 +79,97 @@ export default function FaciDashboardPage() {
 
   useEffect(() => { loadData() }, [loadData])
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [dropdownOpen])
+
+  const maxPoints = faciInfo?.game?.maxPoints ?? null
+  const isLive = faciInfo?.game?.isLive ?? false
+
+  async function handleGoLive() {
+    if (!faciInfo?.game || goingLive) return
+    const prevLive = !!faciInfo.game.isLive
+    const nextLive = !prevLive
+
+    // 1. Instant optimistic update (0ms delay)
+    setFaciInfo((prev) =>
+      prev && prev.game
+        ? { ...prev, game: { ...prev.game, isLive: nextLive } }
+        : prev
+    )
+    toast.success(nextLive ? '🔴 MISSION IS NOW LIVE' : '⬛ MISSION ENDED')
+
+    // 2. Broadcast across tabs so homepage updates immediately
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('game-updates')
+        bc.postMessage({ type: 'STATUS_CHANGED', gameId: faciInfo.game.id, isLive: nextLive })
+        bc.close()
+      }
+    } catch {}
+
+    // 3. Broadcast to all connected devices via Supabase Realtime WebSocket
+    try {
+      supabase.channel('missions-live').send({
+        type: 'broadcast',
+        event: 'game-status-changed',
+        payload: { gameId: faciInfo.game.id, isLive: nextLive },
+      })
+    } catch {}
+
+    setGoingLive(true)
+    try {
+      const res = await fetch('/api/faci/go-live', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        // Rollback on server error
+        setFaciInfo((prev) =>
+          prev && prev.game
+            ? { ...prev, game: { ...prev.game, isLive: prevLive } }
+            : prev
+        )
+        toast.error(data.error || 'Failed to update live status')
+      } else {
+        // Confirm server state
+        setFaciInfo((prev) =>
+          prev && prev.game
+            ? { ...prev, game: { ...prev.game, isLive: data.isLive } }
+            : prev
+        )
+      }
+    } catch {
+      // Rollback on network error
+      setFaciInfo((prev) =>
+        prev && prev.game
+          ? { ...prev, game: { ...prev.game, isLive: prevLive } }
+          : prev
+      )
+      toast.error('SYSTEM ERROR')
+    } finally {
+      setGoingLive(false)
+    }
+  }
+
+  // Derive quick point options based on maxPoints
+  function getQuickPoints(): number[] {
+    if (!maxPoints) return [10, 20, 50, 100]
+    if (maxPoints <= 10) return [maxPoints]
+    if (maxPoints <= 25) return [Math.floor(maxPoints * 0.25), Math.floor(maxPoints * 0.5), Math.floor(maxPoints * 0.75), maxPoints]
+    if (maxPoints <= 100) return [Math.floor(maxPoints * 0.25), Math.floor(maxPoints * 0.5), Math.floor(maxPoints * 0.75), maxPoints]
+    return [Math.floor(maxPoints * 0.1), Math.floor(maxPoints * 0.25), Math.floor(maxPoints * 0.5), maxPoints]
+  }
+
   function handleQuickPoints(pts: number) {
     setPendingPoints(pts)
     setCustomPoints('')
@@ -85,7 +182,11 @@ export default function FaciDashboardPage() {
       toast.error('Enter a valid number of credits')
       return
     }
-    if (pts > 10000) {
+    if (maxPoints && pts > maxPoints) {
+      toast.error(`Maximum ${maxPoints} points allowed for this mission`)
+      return
+    }
+    if (!maxPoints && pts > 10000) {
       toast.error('Maximum 10,000 credits per transaction')
       return
     }
@@ -114,24 +215,23 @@ export default function FaciDashboardPage() {
         setShowModal(false)
       } else {
         setShowModal(false)
-        setSuccess({ teamName: selectedTeam.name, points: pendingPoints })
-        // Update local team points
-        setTeams((prev) =>
-          prev.map((t) =>
-            t.id === selectedTeam.id
-              ? { ...t, currentPoints: t.currentPoints + pendingPoints }
-              : t
-          )
-        )
-        setSelectedTeam((prev) =>
-          prev ? { ...prev, currentPoints: prev.currentPoints + pendingPoints } : null
-        )
+        const teamName = selectedTeam.name
+        const points = pendingPoints
+        toast.success(`+${points} CREDITS AWARDED TO ${teamName}`)
+
+        // Reset selection immediately
+        setSelectedTeam(null)
         setCustomPoints('')
         setPendingPoints(0)
-        // Refresh attended teams
-        const attendedRes = await fetch('/api/faci/attended')
-        if (attendedRes.ok) setAttendedTeams(await attendedRes.json())
-        setTimeout(() => setSuccess(null), 4000)
+        setSuccess({ teamName, points })
+
+        // 1. Instantly reload fresh data
+        await loadData()
+
+        // 2. Auto-refresh the page as requested
+        setTimeout(() => {
+          window.location.reload()
+        }, 1200)
       }
     } catch {
       toast.error('SYSTEM ERROR')
@@ -175,6 +275,8 @@ export default function FaciDashboardPage() {
       </div>
     )
   }
+
+  const quickPoints = getQuickPoints()
 
   return (
     <div className="mission-bg min-h-screen">
@@ -223,34 +325,255 @@ export default function FaciDashboardPage() {
               </div>
             </div>
           </div>
-          <div className="mt-3">
-            <span className="status-active text-xs">OPERATION ACTIVE</span>
+          {/* Max Points Badge */}
+          <div className="mt-4 space-y-3">
+            {/* Max Points */}
+            <div className="flex items-center justify-between">
+              {maxPoints != null ? (
+                <div className="flex items-center gap-1.5 bg-mission-amber/10 border border-mission-amber/30 rounded-lg px-3 py-1.5">
+                  <Trophy className="w-3.5 h-3.5 text-mission-amber" />
+                  <span className="mono text-xs font-bold text-mission-amber">MAX: {maxPoints.toLocaleString()} PTS</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5">
+                  <Trophy className="w-3.5 h-3.5 text-mission-muted" />
+                  <span className="mono text-xs text-mission-muted">UNLIMITED PTS</span>
+                </div>
+              )}
+              {isLive ? (
+                <span className="status-active text-xs flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  LIVE
+                </span>
+              ) : (
+                <span className="status-inactive text-xs">STANDBY</span>
+              )}
+            </div>
+
+            {/* GO LIVE / END SESSION button */}
+            <button
+              onClick={handleGoLive}
+              disabled={goingLive}
+              className={`w-full py-3 rounded-xl mono font-black text-sm tracking-widest flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                isLive
+                  ? 'bg-red-900/40 border border-red-500/50 text-mission-red hover:bg-red-900/60'
+                  : 'bg-green-900/30 border border-green-500/40 text-green-400 hover:bg-green-900/50'
+              } ${goingLive ? 'opacity-80' : ''}`}
+            >
+              <Radio className={`w-4 h-4 ${isLive ? 'animate-pulse' : ''}`} />
+              {isLive ? 'END SESSION' : 'GO LIVE'}
+            </button>
           </div>
         </motion.div>
 
         {/* Team Select */}
         <motion.div
+          ref={dropdownRef}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="mission-card rounded-xl p-5"
+          className="mission-card rounded-xl p-5 relative z-30"
         >
-          <div className="section-label mb-2">SELECT MISSION UNIT</div>
-          <select
-            value={selectedTeam?.id || ''}
-            onChange={(e) => {
-              const team = teams.find((t) => t.id === e.target.value) || null
-              setSelectedTeam(team)
-            }}
-            className="mission-input"
+          <div className="flex items-center justify-between mb-3">
+            <div className="section-label flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-mission-red" />
+              <span>SELECT MISSION UNIT</span>
+            </div>
+            {selectedTeam && (
+              <button
+                type="button"
+                onClick={() => setSelectedTeam(null)}
+                className="mono text-[10px] text-mission-muted hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <X className="w-3 h-3" /> CLEAR
+              </button>
+            )}
+          </div>
+
+          {/* Custom Dropdown Trigger Button */}
+          <button
+            type="button"
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className={`w-full rounded-xl p-3.5 flex items-center justify-between transition-all border text-left cursor-pointer ${
+              dropdownOpen
+                ? 'bg-black/90 border-mission-red shadow-[0_0_20px_rgba(230,57,70,0.2)] ring-1 ring-mission-red/50'
+                : selectedTeam
+                ? 'bg-black/60 border-white/20 hover:border-white/40'
+                : 'bg-black/40 border-mission-border hover:border-mission-border-hover hover:bg-black/60'
+            }`}
           >
-            <option value="">— SELECT TEAM —</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name} ({t.currentPoints} credits){attendedTeamIds.has(t.id) ? ' ✓ SCORED' : ''}
-              </option>
-            ))}
-          </select>
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                  selectedTeam
+                    ? 'bg-mission-red/20 border border-mission-red/40 text-mission-red'
+                    : 'bg-white/5 border border-white/10 text-mission-muted'
+                }`}
+              >
+                {selectedTeam ? (
+                  <span className="mono font-black text-sm">
+                    {selectedTeam.name.slice(0, 2).toUpperCase()}
+                  </span>
+                ) : (
+                  <Users className="w-5 h-5" />
+                )}
+              </div>
+
+              <div className="min-w-0">
+                {selectedTeam ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span className="mono font-black text-base text-white truncate">
+                        {selectedTeam.name}
+                      </span>
+                      {attendedTeamIds.has(selectedTeam.id) && (
+                        <span className="mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                          SCORED
+                        </span>
+                      )}
+                    </div>
+                    <div className="mono text-xs text-mission-amber flex items-center gap-1 mt-0.5">
+                      <Trophy className="w-3 h-3" />
+                      <span>{selectedTeam.currentPoints.toLocaleString()} CREDITS</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="mono text-sm text-mission-muted font-medium">
+                      CHOOSE A TEAM UNIT
+                    </div>
+                    <div className="mono text-[10px] text-white/40 mt-0.5">
+                      {teams.length - attendedTeamIds.size} AVAILABLE · {attendedTeamIds.size} SCORED
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+              <span className="mono text-[10px] tracking-widest text-mission-muted hidden sm:inline-block">
+                {dropdownOpen ? 'CLOSE' : 'SELECT'}
+              </span>
+              <ChevronDown
+                className={`w-4 h-4 text-mission-muted transition-transform duration-200 ${
+                  dropdownOpen ? 'rotate-180 text-mission-red' : ''
+                }`}
+              />
+            </div>
+          </button>
+
+          {/* Animated Dropdown Menu */}
+          <AnimatePresence>
+            {dropdownOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                className="mt-2.5 rounded-xl border border-mission-border bg-black/95 backdrop-blur-2xl shadow-2xl p-2.5 space-y-2 overflow-hidden"
+              >
+                {/* Search Bar if > 3 teams */}
+                {teams.length > 3 && (
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-mission-muted absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={teamSearch}
+                      onChange={(e) => setTeamSearch(e.target.value)}
+                      placeholder="SEARCH TEAM NAME..."
+                      className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-8 py-2 mono text-xs text-white placeholder-mission-muted focus:outline-none focus:border-mission-red/50 focus:bg-white/10 transition-colors"
+                      autoFocus
+                    />
+                    {teamSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setTeamSearch('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-mission-muted hover:text-white"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Units List */}
+                <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1">
+                  {teams.filter((t) => t.name.toLowerCase().includes(teamSearch.toLowerCase().trim())).length === 0 ? (
+                    <div className="py-6 text-center">
+                      <Target className="w-6 h-6 text-mission-muted/40 mx-auto mb-1.5" />
+                      <p className="mono text-xs text-mission-muted">NO MATCHING TEAMS FOUND</p>
+                    </div>
+                  ) : (
+                    teams
+                      .filter((t) => t.name.toLowerCase().includes(teamSearch.toLowerCase().trim()))
+                      .map((team) => {
+                        const isSelected = selectedTeam?.id === team.id
+                        const hasScored = attendedTeamIds.has(team.id)
+
+                        return (
+                          <div
+                            key={team.id}
+                            onClick={() => {
+                              if (hasScored) return
+                              setSelectedTeam(team)
+                              setDropdownOpen(false)
+                              setTeamSearch('')
+                            }}
+                            className={`w-full rounded-lg p-2.5 flex items-center justify-between transition-all border ${
+                              hasScored
+                                ? 'opacity-40 bg-white/[0.01] border-white/5 cursor-not-allowed select-none'
+                                : isSelected
+                                ? 'bg-mission-red/15 border-mission-red/60 text-white cursor-pointer'
+                                : 'bg-white/[0.03] border-white/5 hover:border-white/20 hover:bg-white/[0.08] cursor-pointer'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {/* Avatar pill */}
+                              <div
+                                className={`w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 mono font-black text-xs ${
+                                  hasScored
+                                    ? 'bg-white/5 text-white/30 border border-white/5'
+                                    : isSelected
+                                    ? 'bg-mission-red text-white'
+                                    : 'bg-white/10 text-mission-muted'
+                                }`}
+                              >
+                                {team.name.slice(0, 2).toUpperCase()}
+                              </div>
+
+                              <div className="min-w-0">
+                                <div className="mono font-bold text-sm text-white truncate flex items-center gap-1.5">
+                                  <span className={hasScored ? 'text-white/40 line-through decoration-white/20' : ''}>
+                                    {team.name}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                              {hasScored ? (
+                                <span className="mono text-[10px] font-bold px-2 py-0.5 rounded bg-red-950/40 text-red-400/80 border border-red-500/20 flex items-center gap-1">
+                                  <Lock className="w-2.5 h-2.5" /> SCORED
+                                </span>
+                              ) : (
+                                <>
+                                  <span className="mono text-xs text-mission-amber font-semibold">
+                                    {team.currentPoints.toLocaleString()} PTS
+                                  </span>
+                                  {isSelected && (
+                                    <Check className="w-4 h-4 text-mission-red" />
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <AnimatePresence>
             {selectedTeam && (
@@ -286,7 +609,7 @@ export default function FaciDashboardPage() {
           </AnimatePresence>
         </motion.div>
 
-        {/* Points Buttons */}
+        {/* Points Section */}
         <AnimatePresence>
           {selectedTeam && (
             <motion.div
@@ -296,34 +619,34 @@ export default function FaciDashboardPage() {
               transition={{ delay: 0.15 }}
               className="space-y-4"
             >
-              {/* Quick Points */}
-              <div className="mission-card rounded-xl p-5">
-                <div className="section-label mb-3">QUICK CREDITS</div>
-                <div className="grid grid-cols-4 gap-2">
-                  {QUICK_POINTS.map((pts) => (
-                    <button
-                      key={pts}
-                      onClick={() => handleQuickPoints(pts)}
-                      className="btn-mission py-4 text-base font-black"
-                    >
-                      +{pts}
-                    </button>
-                  ))}
+              {/* Points Range Banner */}
+              {maxPoints != null && (
+                <div className="rounded-xl border border-mission-amber/30 bg-mission-amber/5 px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-mission-amber flex-shrink-0" />
+                    <span className="mono text-xs text-mission-amber">SCORING RANGE FOR THIS MISSION</span>
+                  </div>
+                  <div className="mono font-black text-mission-amber text-sm">
+                    1 – {maxPoints.toLocaleString()} PTS
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Custom Points */}
+              {/* Assign Points */}
               <div className="mission-card rounded-xl p-5">
-                <div className="section-label mb-3">CUSTOM CREDITS</div>
+                <div className="section-label mb-1">ASSIGN POINTS</div>
+                {maxPoints != null && (
+                  <p className="text-mission-muted text-xs mb-3">Enter a value between 1 and {maxPoints.toLocaleString()}</p>
+                )}
                 <div className="flex gap-3">
                   <input
                     type="number"
                     value={customPoints}
                     onChange={(e) => setCustomPoints(e.target.value)}
                     className="mission-input flex-1"
-                    placeholder="Enter credits..."
+                    placeholder={maxPoints ? `1 – ${maxPoints}` : 'Enter credits...'}
                     min="1"
-                    max="10000"
+                    max={maxPoints ?? 10000}
                     onKeyDown={(e) => e.key === 'Enter' && handleCustomPoints()}
                   />
                   <button
@@ -391,7 +714,9 @@ export default function FaciDashboardPage() {
                   </div>
                   <div className="text-right">
                     <div className="mono font-black text-mission-amber text-lg">+{at.pointsFromThisGame}</div>
-                    <div className="mono text-xs text-mission-muted">credits</div>
+                    <div className="mono text-xs text-mission-muted">
+                      {maxPoints != null ? `/ ${maxPoints} pts` : 'credits'}
+                    </div>
                     <div className="flex items-center gap-1 justify-end mt-1">
                       <CheckCircle className="w-3 h-3 text-green-400" />
                       <span className="mono text-xs text-green-400">DONE</span>

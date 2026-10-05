@@ -23,9 +23,18 @@ export async function GET() {
       return NextResponse.json([])
     }
 
-    // Find all transactions for this game
+    // Find all transactions awarded by this facilitator OR for this game
+    const whereClause = facilitator.gameId
+      ? {
+          OR: [
+            { facilitatorId: facilitator.id },
+            { gameId: facilitator.gameId },
+          ],
+        }
+      : { facilitatorId: facilitator.id }
+
     const transactions = await prisma.pointTransaction.findMany({
-      where: { gameId: facilitator.gameId },
+      where: whereClause,
       select: {
         points: true,
         createdAt: true,

@@ -18,7 +18,10 @@ async function getGames() {
           select: { faciId: true, name: true },
         },
       },
-      orderBy: { name: 'asc' },
+      orderBy: [
+        { isLive: 'desc' }, // live games first
+        { name: 'asc' },
+      ],
     })
   } catch {
     return []
