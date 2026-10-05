@@ -12,7 +12,11 @@ export async function GET() {
   try {
     const facilitator = await prisma.facilitator.findUnique({
       where: { id: session.facilitatorId },
-      select: { gameId: true, isActive: true },
+      select: {
+        id: true,
+        gameId: true,
+        isActive: true,
+      },
     })
 
     if (!facilitator || !facilitator.isActive) {
@@ -26,11 +30,11 @@ export async function GET() {
     // Find all transactions awarded by this facilitator OR for this game
     const whereClause = facilitator.gameId
       ? {
-          OR: [
-            { facilitatorId: facilitator.id },
-            { gameId: facilitator.gameId },
-          ],
-        }
+        OR: [
+          { facilitatorId: facilitator.id },
+          { gameId: facilitator.gameId },
+        ],
+      }
       : { facilitatorId: facilitator.id }
 
     const transactions = await prisma.pointTransaction.findMany({
