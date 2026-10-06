@@ -49,6 +49,7 @@ export default function FaciDashboardPage() {
   const [teamSearch, setTeamSearch] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [customPoints, setCustomPoints] = useState('')
+  const [showCustom, setShowCustom] = useState(false)
   const [pendingPoints, setPendingPoints] = useState(0)
   const [showModal, setShowModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -95,6 +96,7 @@ export default function FaciDashboardPage() {
   }, [dropdownOpen])
 
   const maxPoints = faciInfo?.game?.maxPoints ?? null
+  const scoreValue = maxPoints ?? 100
   const isLive = faciInfo?.game?.isLive ?? false
 
   async function handleGoLive() {
@@ -161,16 +163,7 @@ export default function FaciDashboardPage() {
     }
   }
 
-  // Derive quick point options based on maxPoints
-  function getQuickPoints(): number[] {
-    if (!maxPoints) return [10, 20, 50, 100]
-    if (maxPoints <= 10) return [maxPoints]
-    if (maxPoints <= 25) return [Math.floor(maxPoints * 0.25), Math.floor(maxPoints * 0.5), Math.floor(maxPoints * 0.75), maxPoints]
-    if (maxPoints <= 100) return [Math.floor(maxPoints * 0.25), Math.floor(maxPoints * 0.5), Math.floor(maxPoints * 0.75), maxPoints]
-    return [Math.floor(maxPoints * 0.1), Math.floor(maxPoints * 0.25), Math.floor(maxPoints * 0.5), maxPoints]
-  }
-
-  function handleQuickPoints(pts: number) {
+  function handleAwardScore(pts: number = scoreValue) {
     setPendingPoints(pts)
     setCustomPoints('')
     setShowModal(true)
@@ -222,6 +215,7 @@ export default function FaciDashboardPage() {
         // Reset selection immediately
         setSelectedTeam(null)
         setCustomPoints('')
+        setShowCustom(false)
         setPendingPoints(0)
         setSuccess({ teamName, points })
 
@@ -275,8 +269,6 @@ export default function FaciDashboardPage() {
       </div>
     )
   }
-
-  const quickPoints = getQuickPoints()
 
   return (
     <div className="mission-bg min-h-screen">
@@ -619,44 +611,77 @@ export default function FaciDashboardPage() {
               transition={{ delay: 0.15 }}
               className="space-y-4"
             >
-              {/* Points Range Banner */}
-              {maxPoints != null && (
-                <div className="rounded-xl border border-mission-amber/30 bg-mission-amber/5 px-4 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-mission-amber flex-shrink-0" />
-                    <span className="mono text-xs text-mission-amber">SCORING RANGE FOR THIS MISSION</span>
+              <div className="mission-card rounded-2xl p-5 sm:p-6 corner-accent border border-mission-border space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="section-label flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5 text-mission-amber" />
+                    <span>SCORE MISSION POINTS</span>
                   </div>
-                  <div className="mono font-black text-mission-amber text-sm">
-                    1 – {maxPoints.toLocaleString()} PTS
+                  <div className="mono text-xs text-mission-muted">
+                    {faciInfo.game.name.toUpperCase()}
                   </div>
                 </div>
-              )}
 
-              {/* Assign Points */}
-              <div className="mission-card rounded-xl p-5">
-                <div className="section-label mb-1">ASSIGN POINTS</div>
-                {maxPoints != null && (
-                  <p className="text-mission-muted text-xs mb-3">Enter a value between 1 and {maxPoints.toLocaleString()}</p>
-                )}
-                <div className="flex gap-3">
-                  <input
-                    type="number"
-                    value={customPoints}
-                    onChange={(e) => setCustomPoints(e.target.value)}
-                    className="mission-input flex-1"
-                    placeholder={maxPoints ? `1 – ${maxPoints}` : 'Enter credits...'}
-                    min="1"
-                    max={maxPoints ?? 10000}
-                    onKeyDown={(e) => e.key === 'Enter' && handleCustomPoints()}
-                  />
+                {/* Primary Hero Button: Direct Score Button (e.g. 100) */}
+                <button
+                  type="button"
+                  onClick={() => handleAwardScore(scoreValue)}
+                  className="w-full py-5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-black font-black mono tracking-wider shadow-xl shadow-amber-500/25 active:scale-[0.98] transition-all flex items-center justify-between cursor-pointer border border-amber-300 group"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-black/15 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                      <Zap className="w-7 h-7 text-black fill-black" />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-[11px] font-bold tracking-widest text-black/75 uppercase mono">
+                        AWARD FULL SCORE
+                      </div>
+                      <div className="text-xl sm:text-2xl font-black text-black mono">
+                        COMPLETE MISSION
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* The bold score badge, e.g. 100 */}
+                  <div className="mono font-black text-3xl sm:text-4xl bg-black text-amber-400 px-5 py-2 rounded-xl border border-black/40 shadow-inner group-hover:scale-105 transition-transform flex items-center gap-1">
+                    <span>{scoreValue}</span>
+                    <span className="text-xs text-amber-400/70 font-semibold tracking-normal">PTS</span>
+                  </div>
+                </button>
+
+                {/* Collapsible custom input toggle */}
+                <div className="pt-3 border-t border-mission-border/60 text-center">
                   <button
-                    onClick={handleCustomPoints}
-                    disabled={!customPoints}
-                    className="btn-amber py-2.5 px-5 flex items-center gap-2 disabled:opacity-50"
+                    type="button"
+                    onClick={() => setShowCustom(!showCustom)}
+                    className="mono text-xs text-mission-muted hover:text-white transition-colors underline cursor-pointer"
                   >
-                    <Zap className="w-4 h-4" />
-                    AWARD
+                    {showCustom ? 'Hide custom input' : 'Need custom score? Click here'}
                   </button>
+
+                  {showCustom && (
+                    <div className="mt-3 flex gap-3 max-w-sm mx-auto">
+                      <input
+                        type="number"
+                        value={customPoints}
+                        onChange={(e) => setCustomPoints(e.target.value)}
+                        className="mission-input flex-1"
+                        placeholder={`1 – ${scoreValue}`}
+                        min="1"
+                        max={scoreValue}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCustomPoints()}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCustomPoints}
+                        disabled={!customPoints}
+                        className="btn-amber py-2.5 px-4 flex items-center gap-1.5 disabled:opacity-50 text-xs"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        AWARD
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>

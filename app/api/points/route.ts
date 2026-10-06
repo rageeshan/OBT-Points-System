@@ -97,6 +97,10 @@ export async function POST(req: NextRequest) {
         where: { id: teamId },
         data: { currentPoints: { increment: pointsNum } },
       }),
+      prisma.game.update({
+        where: { id: gameId },
+        data: { updatedAt: new Date() },
+      }),
     ])
 
     return NextResponse.json({

@@ -17,9 +17,14 @@ async function getGames() {
           where: { isActive: true },
           select: { faciId: true, name: true },
         },
+        transactions: {
+          select: { createdAt: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
       orderBy: [
-        { isLive: 'desc' }, // live games first
+        { isLive: 'asc' }, // available games first
         { name: 'asc' },
       ],
     })
