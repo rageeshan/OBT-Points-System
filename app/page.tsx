@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db/prisma'
 import Link from 'next/link'
-import { Shield, Trophy, Terminal, ChevronRight, Zap, Lock, UserCheck } from 'lucide-react'
+import { Shield, Trophy, Terminal, ChevronRight, Zap, Lock, UserCheck, Coins } from 'lucide-react'
 import MissionHeader from '@/components/MissionHeader'
 import MissionsSection from '@/components/MissionsSection'
 import FacilitatorsSection from '@/components/FacilitatorsSection'
@@ -10,12 +10,11 @@ export const dynamic = 'force-dynamic'
 
 async function getGames() {
   try {
-    return await prisma.game.findMany({
+    const rawGames = await prisma.game.findMany({
       where: { isActive: true },
       include: {
-        facilitators: {
-          where: { isActive: true },
-          select: { faciId: true, name: true },
+        facilitator: {
+          select: { faciId: true, name: true, isActive: true },
         },
         transactions: {
           select: { createdAt: true },
@@ -28,6 +27,13 @@ async function getGames() {
         { name: 'asc' },
       ],
     })
+
+    return rawGames.map((g) => ({
+      ...g,
+      facilitators: g.facilitator && g.facilitator.isActive
+        ? [{ faciId: g.facilitator.faciId, name: g.facilitator.name }]
+        : [],
+    }))
   } catch {
     return []
   }
@@ -38,7 +44,8 @@ async function getFacilitators() {
     return await prisma.facilitator.findMany({
       where: { isActive: true },
       include: {
-        game: {
+        games: {
+          where: { isActive: true },
           select: { id: true, name: true, location: true },
         },
       },
@@ -54,6 +61,8 @@ export default async function HomePage() {
     getGames(),
     getFacilitators(),
   ])
+
+  const initialNow = Date.now()
 
   return (
     <div className="mission-bg min-h-screen">
@@ -104,16 +113,24 @@ export default async function HomePage() {
         </section>
 
         {/* Active Missions Grid — FIRST */}
-        <MissionsSection games={games} />
+        <MissionsSection games={games} initialNow={initialNow} />
 
         {/* Facilitators List — SECOND */}
         <FacilitatorsSection facilitators={facilitators} />
 
-        {/* Mission Control link */}
+        {/* Portals Access Links */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 pb-24">
-          <div className="flex justify-center">
-            <Link href="/admin/login" className="btn-ghost py-2.5 px-6 text-xs flex items-center gap-2">
-              <Shield className="w-3 h-3" />
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link href="/faci/login" className="btn-ghost py-2.5 px-5 text-xs flex items-center gap-2">
+              <Terminal className="w-3.5 h-3.5 text-green-400" />
+              OFFICER PORTAL
+            </Link>
+            <Link href="/trade/login" className="btn-ghost py-2.5 px-5 text-xs flex items-center gap-2 border-yellow-500/30 text-yellow-400 hover:border-yellow-500/60">
+              <Coins className="w-3.5 h-3.5 text-yellow-400" />
+              TRADE DESK
+            </Link>
+            <Link href="/admin/login" className="btn-ghost py-2.5 px-5 text-xs flex items-center gap-2">
+              <Shield className="w-3.5 h-3.5 text-mission-red" />
               MISSION CONTROL ACCESS
             </Link>
           </div>

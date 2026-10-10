@@ -120,7 +120,7 @@ export default function LeaderboardPage() {
           />
           {lastUpdated && (
             <div className="flex items-center justify-center gap-2 mt-3">
-              <span className="mono text-xs text-mission-muted">
+              <span className="mono text-xs text-mission-muted" suppressHydrationWarning>
                 Last updated: {lastUpdated.toLocaleTimeString()}
               </span>
             </div>

@@ -15,7 +15,8 @@ interface TeamMember {
 interface GameScore {
   points: number
   createdAt: string
-  game: { id: string; name: string; location: string | null }
+  note?: string | null
+  game?: { id: string; name: string; location: string | null } | null
 }
 
 interface Team {
@@ -267,17 +268,24 @@ export default function TeamsPage() {
                           GAMES COMPLETED
                         </div>
                         <div className="space-y-1.5">
-                          {team.transactions.map((txn, i) => (
-                            <div key={i} className="flex items-center justify-between text-xs">
-                              <div className="flex flex-col min-w-0">
-                                <span className="mono font-bold text-white truncate">{txn.game.name}</span>
-                                {txn.game.location && (
-                                  <span className="text-mission-muted">{txn.game.location}</span>
-                                )}
+                          {team.transactions.map((txn, i) => {
+                            const isDeduction = txn.points < 0
+                            return (
+                              <div key={i} className="flex items-center justify-between text-xs">
+                                <div className="flex flex-col min-w-0">
+                                  <span className={`mono font-bold truncate ${isDeduction ? 'text-red-400' : 'text-white'}`}>
+                                    {isDeduction ? `Trade: ${txn.note || 'Deduction'}` : (txn.game?.name || 'Mission')}
+                                  </span>
+                                  {txn.game?.location && (
+                                    <span className="text-mission-muted">{txn.game.location}</span>
+                                  )}
+                                </div>
+                                <span className={`mono font-black ml-2 flex-shrink-0 ${isDeduction ? 'text-red-400' : 'text-mission-amber'}`}>
+                                  {isDeduction ? `${txn.points} pts` : `+${txn.points} pts`}
+                                </span>
                               </div>
-                              <span className="mono font-black text-mission-amber ml-2 flex-shrink-0">+{txn.points}</span>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       </div>
                     )}

@@ -29,9 +29,21 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // ─── Trader route protection ───────────────────────────────
+  if (pathname.startsWith('/trade') && pathname !== '/trade/login') {
+    const token = request.cookies.get('trade-token')?.value
+    if (!token) {
+      return NextResponse.redirect(new URL('/trade/login', request.url))
+    }
+    const session = await verifyToken(token)
+    if (!session || session.role !== 'trade') {
+      return NextResponse.redirect(new URL('/trade/login', request.url))
+    }
+  }
+
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/faci/:path*'],
+  matcher: ['/admin/:path*', '/faci/:path*', '/trade/:path*'],
 }

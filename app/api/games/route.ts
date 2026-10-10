@@ -7,12 +7,20 @@ export async function GET() {
   try {
     const games = await prisma.game.findMany({
       include: {
-        facilitators: { select: { id: true, faciId: true, name: true, isActive: true } },
+        facilitator: { select: { id: true, faciId: true, name: true, isActive: true } },
         transactions: { select: { createdAt: true }, orderBy: { createdAt: 'desc' }, take: 1 },
       },
       orderBy: { createdAt: 'asc' },
     })
-    return NextResponse.json(games, {
+
+    const formatted = games.map((g) => ({
+      ...g,
+      facilitators: g.facilitator && g.facilitator.isActive
+        ? [{ id: g.facilitator.id, faciId: g.facilitator.faciId, name: g.facilitator.name }]
+        : [],
+    }))
+
+    return NextResponse.json(formatted, {
       headers: {
         'Cache-Control': 'public, s-maxage=2, stale-while-revalidate=4',
       },
@@ -28,7 +36,7 @@ export async function POST(req: NextRequest) {
     const session = await getAdminSession()
     if (!session) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
 
-    const { name, description, location, isActive, maxPoints } = await req.json()
+    const { name, description, location, isActive, maxPoints, facilitatorId } = await req.json()
 
     if (!name) return NextResponse.json({ error: 'Mission name is required' }, { status: 400 })
 
@@ -39,6 +47,10 @@ export async function POST(req: NextRequest) {
         location: location?.trim() || null,
         isActive: isActive ?? true,
         maxPoints: maxPoints ? parseInt(maxPoints, 10) : null,
+        facilitatorId: facilitatorId || null,
+      },
+      include: {
+        facilitator: { select: { id: true, faciId: true, name: true, isActive: true } },
       },
     })
 

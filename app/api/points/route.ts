@@ -29,8 +29,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Points must be between 1 and 10,000' }, { status: 400 })
     }
 
+    // Verify game exists and is active
+    const game = await prisma.game.findUnique({ where: { id: gameId } })
+    if (!game || !game.isActive) {
+      return NextResponse.json({ error: 'Mission not found or inactive' }, { status: 404 })
+    }
+
     // Validate facilitator permissions
-    let facilitatorId: string
+    let facilitatorId: string | null = null
 
     if (faciSession) {
       // Verify facilitator is still active and assigned to this game
@@ -42,21 +48,19 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'AGENT DEACTIVATED' }, { status: 403 })
       }
 
-      if (facilitator.gameId !== gameId) {
+      if (game.facilitatorId !== facilitator.id) {
         return NextResponse.json({ error: 'UNAUTHORIZED — Not assigned to this mission' }, { status: 403 })
       }
 
       facilitatorId = facilitator.id
     } else {
-      // Admin awarding — use admin's first facilitator or create admin action
-      // For admin, find the game's facilitator
-      const facilitator = await prisma.facilitator.findFirst({
-        where: { gameId },
-      })
-      if (!facilitator) {
-        return NextResponse.json({ error: 'No facilitator assigned to this mission' }, { status: 400 })
+      // Admin awarding — use game's assigned facilitator if present, or first available
+      if (game.facilitatorId) {
+        facilitatorId = game.facilitatorId
+      } else {
+        const firstFaci = await prisma.facilitator.findFirst({ select: { id: true } })
+        facilitatorId = firstFaci?.id || null
       }
-      facilitatorId = facilitator.id
     }
 
     // Verify team exists
@@ -65,15 +69,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Mission unit not found' }, { status: 404 })
     }
 
-    // Verify game exists and is active
-    const game = await prisma.game.findUnique({ where: { id: gameId } })
-    if (!game || !game.isActive) {
-      return NextResponse.json({ error: 'Mission not found or inactive' }, { status: 404 })
-    }
-
     // ─── ONE-TIME SCORING: Block if team already scored in this game ───────────
     const existingTxn = await prisma.pointTransaction.findFirst({
-      where: { teamId, gameId },
+      where: {
+        teamId,
+        gameId,
+        points: { gt: 0 },
+      },
     })
     if (existingTxn) {
       return NextResponse.json({
@@ -109,8 +111,8 @@ export async function POST(req: NextRequest) {
         txnId: transaction.txnId,
         points: transaction.points,
         team: transaction.team.name,
-        game: transaction.game.name,
-        facilitator: transaction.facilitator.faciId,
+        game: transaction.game?.name || '',
+        facilitator: transaction.facilitator?.faciId || 'HQ',
         createdAt: transaction.createdAt,
       },
     }, { status: 201 })
@@ -135,6 +137,7 @@ export async function GET(req: NextRequest) {
         team: { select: { id: true, name: true } },
         game: { select: { id: true, name: true } },
         facilitator: { select: { id: true, faciId: true, name: true } },
+        trader: { select: { id: true, traderId: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: limit,

@@ -10,7 +10,12 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
 
     const facilitators = await prisma.facilitator.findMany({
-      include: { game: true },
+      include: {
+        games: {
+          select: { id: true, name: true, location: true, maxPoints: true, isLive: true },
+          orderBy: { name: 'asc' },
+        },
+      },
       orderBy: { faciId: 'asc' },
     })
 
@@ -28,7 +33,7 @@ export async function POST(req: NextRequest) {
     const session = await getAdminSession()
     if (!session) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
 
-    const { name, password, gameId, faciId: manualFaciId } = await req.json()
+    const { name, password, gameIds, gameId, faciId: manualFaciId } = await req.json()
 
     if (!name || !password) {
       return NextResponse.json({ error: 'Name and password are required' }, { status: 400 })
@@ -56,18 +61,42 @@ export async function POST(req: NextRequest) {
 
     const passwordHash = await hashPassword(password)
 
+    // Collect games to assign: support both gameIds array or single gameId
+    const assignedGameIds: string[] = Array.isArray(gameIds)
+      ? gameIds
+      : gameId
+      ? [gameId]
+      : []
+
     const facilitator = await prisma.facilitator.create({
       data: {
         faciId,
         name: name.trim(),
         passwordHash,
-        gameId: gameId || null,
         isActive: true,
       },
-      include: { game: true },
     })
 
-    const { passwordHash: _, ...safe } = facilitator
+    // If games are selected, assign this facilitator to those games
+    if (assignedGameIds.length > 0) {
+      await prisma.game.updateMany({
+        where: { id: { in: assignedGameIds } },
+        data: { facilitatorId: facilitator.id },
+      })
+    }
+
+    const fullFacilitator = await prisma.facilitator.findUnique({
+      where: { id: facilitator.id },
+      include: {
+        games: { select: { id: true, name: true, location: true, maxPoints: true, isLive: true } },
+      },
+    })
+
+    if (!fullFacilitator) {
+      return NextResponse.json({ error: 'Failed to retrieve created officer' }, { status: 500 })
+    }
+
+    const { passwordHash: _, ...safe } = fullFacilitator
     return NextResponse.json(safe, { status: 201 })
   } catch {
     return NextResponse.json({ error: 'Failed to create facilitator' }, { status: 500 })

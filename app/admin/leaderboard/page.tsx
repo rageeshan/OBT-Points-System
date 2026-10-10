@@ -23,12 +23,14 @@ async function getLeaderboard() {
   return teams.map((t, i) => ({
     ...t,
     rank: i + 1,
-    gameScores: t.transactions.map((txn) => ({
-      gameId: txn.game.id,
-      gameName: txn.game.name,
-      location: txn.game.location,
-      points: txn.points,
-    })),
+    gameScores: t.transactions
+      .filter((txn) => txn.game)
+      .map((txn) => ({
+        gameId: txn.game!.id,
+        gameName: txn.game!.name,
+        location: txn.game!.location,
+        points: txn.points,
+      })),
   }))
 }
 

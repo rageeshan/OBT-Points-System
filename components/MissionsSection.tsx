@@ -38,8 +38,20 @@ interface Game {
   isActive?: boolean
   createdAt?: string | Date
   updatedAt?: string | Date
-  facilitators: Facilitator[]
+  facilitator?: Facilitator | null
+  facilitators?: Facilitator[]
   transactions?: PointTransactionSnippet[]
+}
+
+function getGameFacilitators(game: Game | null | undefined): Facilitator[] {
+  if (!game) return []
+  if (Array.isArray(game.facilitators) && game.facilitators.length > 0) {
+    return game.facilitators
+  }
+  if (game.facilitator && (game.facilitator as unknown as { isActive?: boolean }).isActive !== false) {
+    return [{ faciId: game.facilitator.faciId, name: game.facilitator.name }]
+  }
+  return []
 }
 
 // ─── Priority & Inactivity Calculations ───────────────────────────────────────
@@ -152,7 +164,7 @@ function MissionsTable({
                   }`}
                 >
                   {/* # Index */}
-                  <td className="py-4 px-4 text-center mono text-xs text-mission-muted font-bold">
+                  <td className="py-4 px-4 text-center mono text-xs text-mission-muted font-bold" suppressHydrationWarning>
                     {priority ? (
                       <span className="text-red-400 font-black">
                         #{String(index + 1).padStart(2, '0')}
@@ -182,7 +194,7 @@ function MissionsTable({
                             AVAILABLE
                           </span>
                           {priority && (
-                            <span className="inline-flex items-center gap-1 text-[9px] mono font-black tracking-widest px-2 py-0.5 rounded-full border border-red-500/60 bg-red-500/25 text-red-300 shadow-sm shadow-red-500/30 animate-pulse">
+                            <span className="inline-flex items-center gap-1 text-[9px] mono font-black tracking-widest px-2 py-0.5 rounded-full border border-red-500/60 bg-red-500/25 text-red-300 shadow-sm shadow-red-500/30 animate-pulse" suppressHydrationWarning>
                               <AlertTriangle className="w-2.5 h-2.5 text-red-400" />
                               TOP PRIORITY
                             </span>
@@ -190,7 +202,7 @@ function MissionsTable({
                         </div>
                         <div className="flex items-center gap-1 text-[10px] mono">
                           <Clock className={`w-3 h-3 ${priority ? 'text-red-400' : 'text-mission-muted'}`} />
-                          <span className={priority ? 'text-red-400 font-bold' : 'text-mission-muted'}>
+                          <span className={priority ? 'text-red-400 font-bold' : 'text-mission-muted'} suppressHydrationWarning>
                             {priority ? `Inactive for ${idleMins}m` : formatIdleTime(idleMins)}
                           </span>
                         </div>
@@ -256,24 +268,27 @@ function MissionsTable({
 
                   {/* Assigned Facilitator */}
                   <td className="py-4 px-4">
-                    {game.facilitators.length > 0 ? (
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {game.facilitators.map((f) => (
-                          <span
-                            key={f.faciId}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/40 border border-green-500/20 text-xs text-green-400 font-semibold"
-                          >
-                            <UserCheck className="w-3 h-3 text-green-400 flex-shrink-0" />
-                            <span className="truncate max-w-[120px]">{f.name}</span>
-                            <span className="mono text-[9px] text-mission-muted font-normal">
-                              ({f.faciId})
+                    {(() => {
+                      const facis = getGameFacilitators(game)
+                      return facis.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {facis.map((f) => (
+                            <span
+                              key={f.faciId}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/40 border border-green-500/20 text-xs text-green-400 font-semibold"
+                            >
+                              <UserCheck className="w-3 h-3 text-green-400 flex-shrink-0" />
+                              <span className="truncate max-w-[120px]">{f.name}</span>
+                              <span className="mono text-[9px] text-mission-muted font-normal">
+                                ({f.faciId})
+                              </span>
                             </span>
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="mono text-xs text-mission-muted">— UNASSIGNED —</span>
-                    )}
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="mono text-xs text-mission-muted">— UNASSIGNED —</span>
+                      )
+                    })()}
                   </td>
 
                   {/* Tactical Intel Preview */}
@@ -397,13 +412,13 @@ function GameCard({
                     AVAILABLE
                   </span>
                   {priority && (
-                    <span className="flex items-center gap-1 text-[9px] mono font-black tracking-widest px-2 py-0.5 rounded-full border border-red-500/60 bg-red-500/25 text-red-300 shadow-sm animate-pulse">
+                    <span className="flex items-center gap-1 text-[9px] mono font-black tracking-widest px-2 py-0.5 rounded-full border border-red-500/60 bg-red-500/25 text-red-300 shadow-sm animate-pulse" suppressHydrationWarning>
                       <AlertTriangle className="w-2.5 h-2.5 text-red-400" />
                       TOP PRIORITY
                     </span>
                   )}
                 </div>
-                <span className={`mono text-[10px] ${priority ? 'text-red-400 font-bold' : 'text-mission-muted'}`}>
+                <span className={`mono text-[10px] ${priority ? 'text-red-400 font-bold' : 'text-mission-muted'}`} suppressHydrationWarning>
                   {priority ? `⚡ Inactive ${idleMins}m` : formatIdleTime(idleMins)}
                 </span>
               </>
@@ -451,17 +466,20 @@ function GameCard({
             <UserCheck className="w-3.5 h-3.5 text-green-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <div className="section-label text-[9px]">MISSION OFFICER</div>
-              {game.facilitators.length > 0 ? (
-                <div className="flex flex-col gap-1 mt-0.5">
-                  {game.facilitators.map((f) => (
-                    <span key={f.faciId} className="text-sm text-green-400 font-semibold truncate">
-                      {f.name}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <div className="mono text-xs text-mission-muted">— UNASSIGNED —</div>
-              )}
+              {(() => {
+                const facis = getGameFacilitators(game)
+                return facis.length > 0 ? (
+                  <div className="flex flex-col gap-1 mt-0.5">
+                    {facis.map((f) => (
+                      <span key={f.faciId} className="text-sm text-green-400 font-semibold truncate">
+                        {f.name}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mono text-xs text-mission-muted">— UNASSIGNED —</div>
+                )
+              })()}
             </div>
           </div>
         </div>
@@ -489,28 +507,48 @@ function GameCard({
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
-export default function MissionsSection({ games: initialGames }: { games: Game[] }) {
+export default function MissionsSection({
+  games: initialGames,
+  initialNow,
+}: {
+  games: Game[]
+  initialNow?: number
+}) {
+  const [mounted, setMounted] = useState(false)
   const [games, setGames] = useState<Game[]>(initialGames)
   const [selectedGame, setSelectedGame] = useState<Game | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [isLiveSync, setIsLiveSync] = useState(false)
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
   const [searchQuery, setSearchQuery] = useState('')
-  const [now, setNow] = useState<number>(() => Date.now())
+  const [now, setNow] = useState<number>(initialNow || 0)
 
   // Dynamic ticker to recalculate idle times every 15 seconds
   useEffect(() => {
+    setMounted(true)
+    setNow(Date.now())
+    setLastUpdated(new Date())
     const timer = setInterval(() => setNow(Date.now()), 15000)
     return () => clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    setGames(initialGames)
+  }, [initialGames])
 
   // Fetch games helper
   const fetchGames = useCallback(async () => {
     try {
       const res = await fetch('/api/games', { cache: 'no-store' })
       if (!res.ok) return
-      const data: Game[] = await res.json()
-      const active = data.filter((g) => g.isActive !== false)
+      const rawData = await res.json()
+      if (!Array.isArray(rawData)) return
+      const active = rawData
+        .filter((g: Game) => g.isActive !== false)
+        .map((g: Game) => ({
+          ...g,
+          facilitators: getGameFacilitators(g),
+        }))
       setGames(active)
       setLastUpdated(new Date())
       setSelectedGame((prev) =>
@@ -633,7 +671,7 @@ export default function MissionsSection({ games: initialGames }: { games: Game[]
     const matchName = g.name.toLowerCase().includes(q)
     const matchLoc = g.location?.toLowerCase().includes(q)
     const matchDesc = g.description?.toLowerCase().includes(q)
-    const matchFaci = g.facilitators.some(
+    const matchFaci = getGameFacilitators(g).some(
       (f) => f.name.toLowerCase().includes(q) || f.faciId.toLowerCase().includes(q)
     )
     return matchName || matchLoc || matchDesc || matchFaci
@@ -667,8 +705,9 @@ export default function MissionsSection({ games: initialGames }: { games: Game[]
         <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
           <div className="flex items-center gap-2 px-3.5 py-1 rounded-full bg-black/40 border border-mission-border text-xs mono">
             <span className={`w-2 h-2 rounded-full ${isLiveSync ? 'bg-green-400 animate-pulse' : 'bg-white/30'}`} />
-            <span className="text-mission-muted">
-              {isLiveSync ? 'REALTIME SYNC' : 'LIVE'} · LAST {lastUpdated.toLocaleTimeString()}
+            <span className="text-mission-muted" suppressHydrationWarning>
+              {isLiveSync ? 'REALTIME SYNC' : 'LIVE'}
+              {mounted && lastUpdated ? ` · LAST ${lastUpdated.toLocaleTimeString()}` : ''}
             </span>
           </div>
 
@@ -678,7 +717,7 @@ export default function MissionsSection({ games: initialGames }: { games: Game[]
           </div>
 
           {topPriorityCount > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/15 border border-red-500/50 text-xs mono text-red-400 font-bold animate-pulse shadow-sm shadow-red-500/20">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/15 border border-red-500/50 text-xs mono text-red-400 font-bold animate-pulse shadow-sm shadow-red-500/20" suppressHydrationWarning>
               <AlertTriangle className="w-3.5 h-3.5" />
               {topPriorityCount} TOP PRIORITY (&gt;5M IDLE)
             </div>
@@ -1028,39 +1067,45 @@ export default function MissionsSection({ games: initialGames }: { games: Game[]
                 </div>
 
                 {/* Officers */}
-                <div className="mb-8">
-                  <div className="section-label text-[10px] mb-2 flex items-center gap-1.5">
-                    <UserCheck className="w-3.5 h-3.5 text-green-400" />
-                    ASSIGNED OFFICERS &amp; FACILITATORS ({selectedGame.facilitators.length})
-                  </div>
-                  {selectedGame.facilitators.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {selectedGame.facilitators.map((f) => (
-                        <div
-                          key={f.faciId}
-                          className="flex items-center justify-between bg-black/40 border border-mission-border rounded-xl px-4 py-3"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-mission-amber/10 border border-mission-amber/30 flex items-center justify-center flex-shrink-0">
-                              <Terminal className="w-3.5 h-3.5 text-mission-amber" />
-                            </div>
-                            <div>
-                              <div className="text-sm font-bold text-white">{f.name}</div>
-                              <div className="mono text-[10px] text-mission-amber font-semibold">{f.faciId}</div>
-                            </div>
-                          </div>
-                          <span className="status-active text-[10px]">ON SITE</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="bg-black/30 rounded-xl p-4 border border-mission-border text-center">
-                      <div className="mono text-xs text-mission-muted">
-                        NO OFFICER ASSIGNED YET — STANDBY MODE
+                {/* Officers */}
+                {(() => {
+                  const selectedFacis = getGameFacilitators(selectedGame)
+                  return (
+                    <div className="mb-8">
+                      <div className="section-label text-[10px] mb-2 flex items-center gap-1.5">
+                        <UserCheck className="w-3.5 h-3.5 text-green-400" />
+                        ASSIGNED OFFICERS &amp; FACILITATORS ({selectedFacis.length})
                       </div>
+                      {selectedFacis.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {selectedFacis.map((f) => (
+                            <div
+                              key={f.faciId}
+                              className="flex items-center justify-between bg-black/40 border border-mission-border rounded-xl px-4 py-3"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-mission-amber/10 border border-mission-amber/30 flex items-center justify-center flex-shrink-0">
+                                  <Terminal className="w-3.5 h-3.5 text-mission-amber" />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-bold text-white">{f.name}</div>
+                                  <div className="mono text-[10px] text-mission-amber font-semibold">{f.faciId}</div>
+                                </div>
+                              </div>
+                              <span className="status-active text-[10px]">ON SITE</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-black/30 rounded-xl p-4 border border-mission-border text-center">
+                          <div className="mono text-xs text-mission-muted">
+                            NO OFFICER ASSIGNED YET — STANDBY MODE
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  )
+                })()}
               </motion.div>
             </div>
           )

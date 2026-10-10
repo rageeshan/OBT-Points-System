@@ -15,19 +15,23 @@ import { supabase } from '@/lib/supabase/client'
 interface Team {
   id: string
   name: string
+  leaderName?: string
   currentPoints: number
+}
+
+interface AssignedGame {
+  id: string
+  name: string
+  location?: string
+  maxPoints?: number | null
+  isLive?: boolean
 }
 
 interface FaciInfo {
   faciId: string
   name: string
-  game: {
-    id: string
-    name: string
-    location?: string
-    maxPoints?: number | null
-    isLive?: boolean
-  } | null
+  games?: AssignedGame[]
+  game?: AssignedGame | null
 }
 
 interface AttendedTeam {
@@ -42,6 +46,7 @@ interface AttendedTeam {
 export default function FaciDashboardPage() {
   const router = useRouter()
   const [faciInfo, setFaciInfo] = useState<FaciInfo | null>(null)
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null)
   const [teams, setTeams] = useState<Team[]>([])
   const [attendedTeams, setAttendedTeams] = useState<AttendedTeam[]>([])
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
@@ -57,28 +62,59 @@ export default function FaciDashboardPage() {
   const [success, setSuccess] = useState<{ teamName: string; points: number } | null>(null)
   const [goingLive, setGoingLive] = useState(false)
 
-  const loadData = useCallback(async () => {
+  // Assigned games list
+  const gamesList: AssignedGame[] = (faciInfo?.games && faciInfo.games.length > 0)
+    ? faciInfo.games
+    : faciInfo?.game
+    ? [faciInfo.game]
+    : []
+
+  const activeGame: AssignedGame | null = (selectedGameId && gamesList.find((g) => g.id === selectedGameId))
+    || gamesList[0]
+    || null
+
+  const loadData = useCallback(async (targetGameId?: string) => {
     try {
-      const [faciRes, teamsRes, attendedRes] = await Promise.all([
+      const [faciRes, teamsRes] = await Promise.all([
         fetch('/api/faci/me'),
         fetch('/api/teams'),
-        fetch('/api/faci/attended'),
       ])
       if (faciRes.status === 401) {
         router.push('/faci/login')
         return
       }
-      if (faciRes.ok) setFaciInfo(await faciRes.json())
+      let currentInfo: FaciInfo | null = null
+      if (faciRes.ok) {
+        currentInfo = await faciRes.json()
+        setFaciInfo(currentInfo)
+      }
       if (teamsRes.ok) setTeams(await teamsRes.json())
-      if (attendedRes.ok) setAttendedTeams(await attendedRes.json())
+
+      const gId = targetGameId || selectedGameId || currentInfo?.games?.[0]?.id || currentInfo?.game?.id
+      if (gId) {
+        const attendedRes = await fetch(`/api/faci/attended?gameId=${gId}`)
+        if (attendedRes.ok) setAttendedTeams(await attendedRes.json())
+      }
     } catch {
       toast.error('Failed to load data')
     } finally {
       setLoading(false)
     }
-  }, [router])
+  }, [router, selectedGameId])
 
   useEffect(() => { loadData() }, [loadData])
+
+  // When selected game changes, fetch attended teams for that game
+  useEffect(() => {
+    if (activeGame?.id) {
+      fetch(`/api/faci/attended?gameId=${activeGame.id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) setAttendedTeams(data)
+        })
+        .catch(() => {})
+    }
+  }, [selectedGameId, activeGame?.id])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -95,28 +131,31 @@ export default function FaciDashboardPage() {
     }
   }, [dropdownOpen])
 
-  const maxPoints = faciInfo?.game?.maxPoints ?? null
+  const maxPoints = activeGame?.maxPoints ?? null
   const scoreValue = maxPoints ?? 100
-  const isLive = faciInfo?.game?.isLive ?? false
+  const isLive = activeGame?.isLive ?? false
 
   async function handleGoLive() {
-    if (!faciInfo?.game || goingLive) return
-    const prevLive = !!faciInfo.game.isLive
+    if (!activeGame || goingLive) return
+    const prevLive = !!activeGame.isLive
     const nextLive = !prevLive
 
-    // 1. Instant optimistic update (0ms delay)
-    setFaciInfo((prev) =>
-      prev && prev.game
-        ? { ...prev, game: { ...prev.game, isLive: nextLive } }
-        : prev
-    )
+    // 1. Instant optimistic update
+    setFaciInfo((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        games: (prev.games || []).map((g) => (g.id === activeGame.id ? { ...g, isLive: nextLive } : g)),
+        game: prev.game?.id === activeGame.id ? { ...prev.game, isLive: nextLive } : prev.game,
+      }
+    })
     toast.success(nextLive ? '🔴 MISSION IS NOW LIVE' : '⬛ MISSION ENDED')
 
     // 2. Broadcast across tabs so homepage updates immediately
     try {
       if (typeof BroadcastChannel !== 'undefined') {
         const bc = new BroadcastChannel('game-updates')
-        bc.postMessage({ type: 'STATUS_CHANGED', gameId: faciInfo.game.id, isLive: nextLive })
+        bc.postMessage({ type: 'STATUS_CHANGED', gameId: activeGame.id, isLive: nextLive })
         bc.close()
       }
     } catch {}
@@ -126,37 +165,49 @@ export default function FaciDashboardPage() {
       supabase.channel('missions-live').send({
         type: 'broadcast',
         event: 'game-status-changed',
-        payload: { gameId: faciInfo.game.id, isLive: nextLive },
+        payload: { gameId: activeGame.id, isLive: nextLive },
       })
     } catch {}
 
     setGoingLive(true)
     try {
-      const res = await fetch('/api/faci/go-live', { method: 'POST' })
+      const res = await fetch('/api/faci/go-live', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId: activeGame.id }),
+      })
       const data = await res.json()
       if (!res.ok) {
-        // Rollback on server error
-        setFaciInfo((prev) =>
-          prev && prev.game
-            ? { ...prev, game: { ...prev.game, isLive: prevLive } }
-            : prev
-        )
+        // Rollback
+        setFaciInfo((prev) => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            games: (prev.games || []).map((g) => (g.id === activeGame.id ? { ...g, isLive: prevLive } : g)),
+            game: prev.game?.id === activeGame.id ? { ...prev.game, isLive: prevLive } : prev.game,
+          }
+        })
         toast.error(data.error || 'Failed to update live status')
       } else {
-        // Confirm server state
-        setFaciInfo((prev) =>
-          prev && prev.game
-            ? { ...prev, game: { ...prev.game, isLive: data.isLive } }
-            : prev
-        )
+        setFaciInfo((prev) => {
+          if (!prev) return prev
+          return {
+            ...prev,
+            games: (prev.games || []).map((g) => (g.id === activeGame.id ? { ...g, isLive: data.isLive } : g)),
+            game: prev.game?.id === activeGame.id ? { ...prev.game, isLive: data.isLive } : prev.game,
+          }
+        })
       }
     } catch {
       // Rollback on network error
-      setFaciInfo((prev) =>
-        prev && prev.game
-          ? { ...prev, game: { ...prev.game, isLive: prevLive } }
-          : prev
-      )
+      setFaciInfo((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          games: (prev.games || []).map((g) => (g.id === activeGame.id ? { ...g, isLive: prevLive } : g)),
+          game: prev.game?.id === activeGame.id ? { ...prev.game, isLive: prevLive } : prev.game,
+        }
+      })
       toast.error('SYSTEM ERROR')
     } finally {
       setGoingLive(false)
@@ -164,12 +215,22 @@ export default function FaciDashboardPage() {
   }
 
   function handleAwardScore(pts: number = scoreValue) {
+    if (!selectedTeam) return
+    if (attendedTeamIds.has(selectedTeam.id)) {
+      toast.error(`Unit ${selectedTeam.name} has already completed this mission!`)
+      return
+    }
     setPendingPoints(pts)
     setCustomPoints('')
     setShowModal(true)
   }
 
   function handleCustomPoints() {
+    if (!selectedTeam) return
+    if (attendedTeamIds.has(selectedTeam.id)) {
+      toast.error(`Unit ${selectedTeam.name} has already completed this mission!`)
+      return
+    }
     const pts = parseInt(customPoints, 10)
     if (!pts || pts <= 0) {
       toast.error('Enter a valid number of credits')
@@ -188,7 +249,13 @@ export default function FaciDashboardPage() {
   }
 
   async function handleConfirmPoints() {
-    if (!selectedTeam || !faciInfo?.game || !pendingPoints) return
+    if (!selectedTeam || !activeGame || !pendingPoints) return
+
+    if (attendedTeamIds.has(selectedTeam.id)) {
+      toast.error(`Unit ${selectedTeam.name} has already completed this mission!`)
+      setShowModal(false)
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -197,7 +264,7 @@ export default function FaciDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           teamId: selectedTeam.id,
-          gameId: faciInfo.game.id,
+          gameId: activeGame.id,
           points: pendingPoints,
         }),
       })
@@ -210,22 +277,38 @@ export default function FaciDashboardPage() {
         setShowModal(false)
         const teamName = selectedTeam.name
         const points = pendingPoints
+        const currentSelectedTeam = selectedTeam
         toast.success(`+${points} CREDITS AWARDED TO ${teamName}`)
 
-        // Reset selection immediately
+        // Immediately add to attended teams state so team is permanently locked
+        setAttendedTeams((prev) => [
+          {
+            teamId: currentSelectedTeam.id,
+            teamName: currentSelectedTeam.name,
+            leaderName: currentSelectedTeam.leaderName || 'CMD',
+            totalPoints: currentSelectedTeam.currentPoints + points,
+            pointsFromThisGame: points,
+            scoredAt: new Date().toISOString(),
+          },
+          ...prev,
+        ])
+
+        // Immediately update team points in teams state
+        setTeams((prev) =>
+          prev.map((t) =>
+            t.id === currentSelectedTeam.id ? { ...t, currentPoints: t.currentPoints + points } : t
+          )
+        )
+
+        // Reset selection
         setSelectedTeam(null)
         setCustomPoints('')
         setShowCustom(false)
         setPendingPoints(0)
         setSuccess({ teamName, points })
 
-        // 1. Instantly reload fresh data
-        await loadData()
-
-        // 2. Auto-refresh the page as requested
-        setTimeout(() => {
-          window.location.reload()
-        }, 1200)
+        // Sync fresh attendance from server in background
+        loadData(activeGame.id)
       }
     } catch {
       toast.error('SYSTEM ERROR')
@@ -240,7 +323,7 @@ export default function FaciDashboardPage() {
     router.push('/faci/login')
   }
 
-  // Teams that have already attended (scored) — for the dropdown label
+  // Teams that have already attended this active game
   const attendedTeamIds = new Set(attendedTeams.map((t) => t.teamId))
 
   if (loading) {
@@ -254,14 +337,14 @@ export default function FaciDashboardPage() {
     )
   }
 
-  if (!faciInfo?.game) {
+  if (!activeGame) {
     return (
       <div className="mission-bg min-h-screen flex items-center justify-center px-4">
         <div className="mission-card rounded-xl p-8 max-w-md text-center">
           <Terminal className="w-12 h-12 text-mission-amber mx-auto mb-4" />
           <div className="classified-badge mx-auto w-fit mb-3">AGENT: {faciInfo?.faciId}</div>
-          <div className="mono text-xl font-bold text-white mb-2">NO MISSION ASSIGNED</div>
-          <p className="text-mission-muted text-sm mb-6">Contact Mission Control to be assigned a mission.</p>
+          <div className="mono text-xl font-bold text-white mb-2">NO MISSIONS ASSIGNED</div>
+          <p className="text-mission-muted text-sm mb-6">Contact Mission Control to be assigned one or more missions.</p>
           <button onClick={handleLogout} className="btn-ghost flex items-center gap-2 mx-auto">
             <LogOut className="w-4 h-4" />LOGOUT
           </button>
@@ -285,8 +368,8 @@ export default function FaciDashboardPage() {
             />
           </div>
           <div>
-            <div className="mono text-xs font-bold text-mission-amber tracking-widest">{faciInfo.faciId}</div>
-            <div className="mono text-[10px] text-mission-muted">{faciInfo.name}</div>
+            <div className="mono text-xs font-bold text-mission-amber tracking-widest">{faciInfo?.faciId}</div>
+            <div className="mono text-[10px] text-mission-muted">{faciInfo?.name}</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -297,29 +380,73 @@ export default function FaciDashboardPage() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
-        {/* Mission Info */}
+        {/* Mission Switcher Tabs (if officer has multiple missions assigned) */}
+        {gamesList.length > 1 && (
+          <div className="space-y-1.5">
+            <div className="section-label text-[10px] flex items-center gap-1.5 text-mission-amber">
+              <Target className="w-3 h-3 text-mission-amber" />
+              <span>YOUR ASSIGNED MISSIONS ({gamesList.length}) — SELECT ACTIVE</span>
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+              {gamesList.map((g) => {
+                const isCurrent = g.id === activeGame.id
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedGameId(g.id)
+                      setSelectedTeam(null)
+                    }}
+                    className={`px-3.5 py-2 rounded-xl mono text-xs font-black tracking-wider transition-all flex items-center gap-2 border flex-shrink-0 cursor-pointer ${
+                      isCurrent
+                        ? 'bg-mission-amber text-black border-amber-300 shadow-lg shadow-amber-500/20 scale-[1.02]'
+                        : 'bg-black/60 text-mission-muted border-mission-border hover:text-white hover:border-mission-border-hover'
+                    }`}
+                  >
+                    <span>{g.name.toUpperCase()}</span>
+                    {g.isLive && (
+                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Mission Info Card */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          key={activeGame.id}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           className="glass-card-bright rounded-xl p-5"
         >
-          <div className="classified-badge mb-3 w-fit">AGENT ACCESS GRANTED</div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="classified-badge w-fit">ACTIVE MISSION</div>
+            {gamesList.length > 1 && (
+              <span className="mono text-[10px] text-mission-muted">
+                MISSION {gamesList.findIndex((g) => g.id === activeGame.id) + 1} OF {gamesList.length}
+              </span>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="section-label">MISSION</div>
-              <div className="mono font-black text-white text-sm tracking-wider">{faciInfo.game.name.toUpperCase()}</div>
+              <div className="mono font-black text-white text-sm tracking-wider">{activeGame.name.toUpperCase()}</div>
             </div>
             <div>
               <div className="section-label">LOCATION</div>
               <div className="flex items-center gap-1">
                 <MapPin className="w-3 h-3 text-mission-amber" />
-                <span className="mono text-sm text-white">{faciInfo.game.location || 'UNSET'}</span>
+                <span className="mono text-sm text-white">{activeGame.location || 'UNSET'}</span>
               </div>
             </div>
           </div>
-          {/* Max Points Badge */}
+
+          {/* Max Points Badge & Live Status */}
           <div className="mt-4 space-y-3">
-            {/* Max Points */}
             <div className="flex items-center justify-between">
               {maxPoints != null ? (
                 <div className="flex items-center gap-1.5 bg-mission-amber/10 border border-mission-amber/30 rounded-lg px-3 py-1.5">
@@ -520,7 +647,6 @@ export default function FaciDashboardPage() {
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
-                              {/* Avatar pill */}
                               <div
                                 className={`w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 mono font-black text-xs ${
                                   hasScored
@@ -587,7 +713,6 @@ export default function FaciDashboardPage() {
                     </div>
                   </div>
                 </div>
-                {/* Warning if team already scored */}
                 {attendedTeamIds.has(selectedTeam.id) && (
                   <div className="mt-3 flex items-center gap-2 bg-yellow-900/20 border border-yellow-600/30 rounded-lg px-3 py-2">
                     <Target className="w-4 h-4 text-yellow-400 flex-shrink-0" />
@@ -618,34 +743,46 @@ export default function FaciDashboardPage() {
                     <span>SCORE MISSION POINTS</span>
                   </div>
                   <div className="mono text-xs text-mission-muted">
-                    {faciInfo.game.name.toUpperCase()}
+                    {activeGame.name.toUpperCase()}
                   </div>
                 </div>
 
-                {/* Primary Hero Button: Direct Score Button (e.g. 100) */}
+                {/* Primary Hero Button: Direct Score Button */}
                 <button
                   type="button"
                   onClick={() => handleAwardScore(scoreValue)}
-                  className="w-full py-5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-black font-black mono tracking-wider shadow-xl shadow-amber-500/25 active:scale-[0.98] transition-all flex items-center justify-between cursor-pointer border border-amber-300 group"
+                  disabled={attendedTeamIds.has(selectedTeam.id) || submitting}
+                  className={`w-full py-5 px-6 rounded-2xl mono tracking-wider transition-all flex items-center justify-between border ${
+                    attendedTeamIds.has(selectedTeam.id)
+                      ? 'bg-black/40 border-mission-border text-mission-muted cursor-not-allowed opacity-40 select-none'
+                      : 'bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-black font-black shadow-xl shadow-amber-500/25 active:scale-[0.98] cursor-pointer border-amber-300 group'
+                  }`}
                 >
                   <div className="flex items-center gap-3.5">
                     <div className="w-12 h-12 rounded-xl bg-black/15 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                      <Zap className="w-7 h-7 text-black fill-black" />
+                      {attendedTeamIds.has(selectedTeam.id) ? (
+                        <Lock className="w-7 h-7 text-mission-muted" />
+                      ) : (
+                        <Zap className="w-7 h-7 text-black fill-black" />
+                      )}
                     </div>
                     <div className="text-left">
-                      <div className="text-[11px] font-bold tracking-widest text-black/75 uppercase mono">
-                        AWARD FULL SCORE
+                      <div className="text-[11px] font-bold tracking-widest uppercase mono opacity-75">
+                        {attendedTeamIds.has(selectedTeam.id) ? 'MISSION COMPLETED' : 'AWARD FULL SCORE'}
                       </div>
-                      <div className="text-xl sm:text-2xl font-black text-black mono">
-                        COMPLETE MISSION
+                      <div className="text-xl sm:text-2xl font-black mono">
+                        {attendedTeamIds.has(selectedTeam.id) ? 'ALREADY SCORED' : 'COMPLETE MISSION'}
                       </div>
                     </div>
                   </div>
 
-                  {/* The bold score badge, e.g. 100 */}
-                  <div className="mono font-black text-3xl sm:text-4xl bg-black text-amber-400 px-5 py-2 rounded-xl border border-black/40 shadow-inner group-hover:scale-105 transition-transform flex items-center gap-1">
+                  <div className={`mono font-black text-3xl sm:text-4xl px-5 py-2 rounded-xl border border-black/40 shadow-inner flex items-center gap-1 ${
+                    attendedTeamIds.has(selectedTeam.id)
+                      ? 'bg-black/60 text-mission-muted'
+                      : 'bg-black text-amber-400 group-hover:scale-105 transition-transform'
+                  }`}>
                     <span>{scoreValue}</span>
-                    <span className="text-xs text-amber-400/70 font-semibold tracking-normal">PTS</span>
+                    <span className="text-xs opacity-70 font-semibold tracking-normal">PTS</span>
                   </div>
                 </button>
 
@@ -669,12 +806,13 @@ export default function FaciDashboardPage() {
                         placeholder={`1 – ${scoreValue}`}
                         min="1"
                         max={scoreValue}
+                        disabled={attendedTeamIds.has(selectedTeam.id)}
                         onKeyDown={(e) => e.key === 'Enter' && handleCustomPoints()}
                       />
                       <button
                         type="button"
                         onClick={handleCustomPoints}
-                        disabled={!customPoints}
+                        disabled={!customPoints || attendedTeamIds.has(selectedTeam.id) || submitting}
                         className="btn-amber py-2.5 px-4 flex items-center gap-1.5 disabled:opacity-50 text-xs"
                       >
                         <Zap className="w-3.5 h-3.5" />
@@ -697,6 +835,7 @@ export default function FaciDashboardPage() {
 
         {/* ─── TEAMS ATTENDED ─────────────────────────────────────── */}
         <motion.div
+          key={`attended-${activeGame.id}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -705,7 +844,7 @@ export default function FaciDashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <div className="section-label flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5" />
-              TEAMS ATTENDED
+              TEAMS ATTENDED — {activeGame.name.toUpperCase()}
             </div>
             <div className="mono text-xs text-mission-muted">
               {attendedTeams.length} unit{attendedTeams.length !== 1 ? 's' : ''} scored
@@ -715,7 +854,7 @@ export default function FaciDashboardPage() {
           {attendedTeams.length === 0 ? (
             <div className="text-center py-6">
               <Target className="w-8 h-8 text-mission-muted mx-auto mb-2" />
-              <div className="mono text-xs text-mission-muted">NO TEAMS HAVE BEEN SCORED YET</div>
+              <div className="mono text-xs text-mission-muted">NO TEAMS HAVE BEEN SCORED FOR THIS MISSION YET</div>
             </div>
           ) : (
             <div className="space-y-2">
@@ -732,7 +871,7 @@ export default function FaciDashboardPage() {
                     <div className="mono text-xs text-mission-muted">CMD: {at.leaderName}</div>
                     <div className="flex items-center gap-1 mt-0.5">
                       <Clock className="w-3 h-3 text-mission-muted" />
-                      <span className="mono text-xs text-mission-muted">
+                      <span className="mono text-xs text-mission-muted" suppressHydrationWarning>
                         {new Date(at.scoredAt).toLocaleTimeString()}
                       </span>
                     </div>
@@ -775,11 +914,11 @@ export default function FaciDashboardPage() {
       </main>
 
       {/* Confirm Modal */}
-      {faciInfo.game && selectedTeam && (
+      {activeGame && selectedTeam && (
         <PointsModal
           isOpen={showModal}
           teamName={selectedTeam.name}
-          gameName={faciInfo.game.name}
+          gameName={activeGame.name}
           points={pendingPoints}
           onConfirm={handleConfirmPoints}
           onAbort={() => setShowModal(false)}

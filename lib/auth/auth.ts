@@ -15,10 +15,16 @@ export type FaciSession = {
   role: 'facilitator'
   faciId: string
   facilitatorId: string
-  gameId: string | null
 }
 
-export type Session = AdminSession | FaciSession
+export type TraderSession = {
+  role: 'trade'
+  traderId: string
+  dbTraderId?: string
+  name: string
+}
+
+export type Session = AdminSession | FaciSession | TraderSession
 
 // ─── JWT Utilities ────────────────────────────────────────────
 
@@ -45,7 +51,8 @@ export async function getSession(): Promise<Session | null> {
   const cookieStore = await cookies()
   const token =
     cookieStore.get('admin-token')?.value ||
-    cookieStore.get('faci-token')?.value
+    cookieStore.get('faci-token')?.value ||
+    cookieStore.get('trade-token')?.value
   if (!token) return null
   return verifyToken(token)
 }
@@ -66,6 +73,15 @@ export async function getFaciSession(): Promise<FaciSession | null> {
   const session = await verifyToken(token)
   if (!session || session.role !== 'facilitator') return null
   return session as FaciSession
+}
+
+export async function getTradeSession(): Promise<TraderSession | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('trade-token')?.value
+  if (!token) return null
+  const session = await verifyToken(token)
+  if (!session || session.role !== 'trade') return null
+  return session as TraderSession
 }
 
 // ─── Admin Auth ───────────────────────────────────────────────

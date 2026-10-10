@@ -28,12 +28,14 @@ export async function GET() {
       currentPoints: team.currentPoints,
       rank: idx + 1,
       // Game breakdown: which games they scored in and how many points
-      gameScores: team.transactions.map((t) => ({
-        gameId: t.game.id,
-        gameName: t.game.name,
-        location: t.game.location,
-        points: t.points,
-      })),
+      gameScores: team.transactions
+        .filter((t) => t.game)
+        .map((t) => ({
+          gameId: t.game!.id,
+          gameName: t.game!.name,
+          location: t.game!.location,
+          points: t.points,
+        })),
     }))
 
     return NextResponse.json(ranked, {

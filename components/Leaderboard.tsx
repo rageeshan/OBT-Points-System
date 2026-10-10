@@ -99,7 +99,7 @@ export default function Leaderboard({ initialData, large = false }: LeaderboardP
           </span>
         </div>
         {lastUpdated && (
-          <span className="mono text-xs text-mission-muted">
+          <span className="mono text-xs text-mission-muted" suppressHydrationWarning>
             Updated {lastUpdated.toLocaleTimeString()}
           </span>
         )}
@@ -218,7 +218,9 @@ export default function Leaderboard({ initialData, large = false }: LeaderboardP
                               <span className="text-mission-muted">{gs.location}</span>
                             )}
                           </div>
-                          <span className="mono font-black text-mission-amber">+{gs.points} pts</span>
+                          <span className={`mono font-black ${gs.points < 0 ? 'text-red-400' : 'text-mission-amber'}`}>
+                            {gs.points < 0 ? `${gs.points} pts` : `+${gs.points} pts`}
+                          </span>
                         </div>
                       ))}
                     </div>

@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getFaciSession } from '@/lib/auth/auth'
 import { prisma } from '@/lib/db/prisma'
 
-// GET /api/faci/attended — returns teams that scored in the faci's assigned game
-export async function GET() {
+// GET /api/faci/attended — returns teams that scored in the faci's assigned game(s)
+export async function GET(req: NextRequest) {
   const session = await getFaciSession()
   if (!session) {
     return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
@@ -14,8 +14,8 @@ export async function GET() {
       where: { id: session.facilitatorId },
       select: {
         id: true,
-        gameId: true,
         isActive: true,
+        games: { select: { id: true } },
       },
     })
 
@@ -23,22 +23,24 @@ export async function GET() {
       return NextResponse.json({ error: 'AGENT DEACTIVATED' }, { status: 403 })
     }
 
-    if (!facilitator.gameId) {
+    const assignedGameIds = facilitator.games.map((g) => g.id)
+    if (assignedGameIds.length === 0) {
       return NextResponse.json([])
     }
 
-    // Find all transactions awarded by this facilitator OR for this game
-    const whereClause = facilitator.gameId
-      ? {
-        OR: [
-          { facilitatorId: facilitator.id },
-          { gameId: facilitator.gameId },
-        ],
-      }
-      : { facilitatorId: facilitator.id }
+    const url = new URL(req.url)
+    const specificGameId = url.searchParams.get('gameId')
 
+    const targetGameIds = specificGameId && assignedGameIds.includes(specificGameId)
+      ? [specificGameId]
+      : assignedGameIds
+
+    // Find all transactions awarded for these games (only positive score awards)
     const transactions = await prisma.pointTransaction.findMany({
-      where: whereClause,
+      where: {
+        gameId: { in: targetGameIds },
+        points: { gt: 0 },
+      },
       select: {
         points: true,
         createdAt: true,

@@ -12,7 +12,12 @@ export async function GET() {
   try {
     const facilitator = await prisma.facilitator.findUnique({
       where: { id: session.facilitatorId },
-      include: { game: { select: { id: true, name: true, location: true, maxPoints: true, isLive: true } } },
+      include: {
+        games: {
+          select: { id: true, name: true, location: true, maxPoints: true, isLive: true },
+          orderBy: { name: 'asc' },
+        },
+      },
     })
 
     if (!facilitator || !facilitator.isActive) {
@@ -22,7 +27,8 @@ export async function GET() {
     return NextResponse.json({
       faciId: facilitator.faciId,
       name: facilitator.name,
-      game: facilitator.game,
+      games: facilitator.games,
+      game: facilitator.games[0] || null, // fallback for single-game compatibility
       isActive: facilitator.isActive,
     })
   } catch {

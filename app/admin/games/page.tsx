@@ -1,10 +1,16 @@
-
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Edit2, Trash2, Target, X, Check, AlertTriangle, MapPin, Users, Trophy } from 'lucide-react'
+import { Plus, Edit2, Trash2, Target, X, Check, AlertTriangle, MapPin, UserCheck, Trophy } from 'lucide-react'
 import toast from 'react-hot-toast'
+
+interface FacilitatorSummary {
+  id: string
+  faciId: string
+  name: string
+  isActive: boolean
+}
 
 interface Game {
   id: string
@@ -13,32 +19,45 @@ interface Game {
   location?: string
   maxPoints?: number | null
   isActive: boolean
-  facilitators?: { id: string; faciId: string; name: string; isActive: boolean }[]
+  facilitatorId?: string | null
+  facilitator?: FacilitatorSummary | null
   createdAt: string
 }
 
-const emptyForm = { name: '', description: '', location: '', maxPoints: '', isActive: true }
+const emptyForm = {
+  name: '',
+  description: '',
+  location: '',
+  maxPoints: '',
+  facilitatorId: '',
+  isActive: true,
+}
 
 export default function GamesPage() {
   const [games, setGames] = useState<Game[]>([])
+  const [facilitators, setFacilitators] = useState<FacilitatorSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editGame, setEditGame] = useState<Game | null>(null)
-  const [form, setForm] = useState<{ name: string; description: string; location: string; maxPoints: string; isActive: boolean }>(emptyForm)
+  const [form, setForm] = useState(emptyForm)
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-  const fetchGames = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/games')
-      if (res.ok) setGames(await res.json())
+      const [gamesRes, facisRes] = await Promise.all([
+        fetch('/api/games'),
+        fetch('/api/facilitators'),
+      ])
+      if (gamesRes.ok) setGames(await gamesRes.json())
+      if (facisRes.ok) setFacilitators(await facisRes.json())
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchGames() }, [fetchGames])
+  useEffect(() => { fetchData() }, [fetchData])
 
   function openCreate() {
     setEditGame(null)
@@ -53,6 +72,7 @@ export default function GamesPage() {
       description: game.description || '',
       location: game.location || '',
       maxPoints: game.maxPoints != null ? String(game.maxPoints) : '',
+      facilitatorId: game.facilitatorId || game.facilitator?.id || '',
       isActive: game.isActive,
     })
     setShowModal(true)
@@ -68,8 +88,12 @@ export default function GamesPage() {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...form,
+          name: form.name,
+          description: form.description,
+          location: form.location,
+          isActive: form.isActive,
           maxPoints: form.maxPoints ? parseInt(form.maxPoints, 10) : null,
+          facilitatorId: form.facilitatorId || null,
         }),
       })
       const data = await res.json()
@@ -77,7 +101,7 @@ export default function GamesPage() {
       else {
         toast.success(editGame ? '✓ MISSION UPDATED' : '✓ MISSION CREATED')
         setShowModal(false)
-        fetchGames()
+        fetchData()
       }
     } catch {
       toast.error('SYSTEM ERROR')
@@ -96,7 +120,7 @@ export default function GamesPage() {
       if (!res.ok) toast.error('Failed to update status')
       else {
         toast.success(game.isActive ? '✓ MISSION DEACTIVATED' : '✓ MISSION ACTIVATED')
-        fetchGames()
+        fetchData()
       }
     } catch {
       toast.error('SYSTEM ERROR')
@@ -110,7 +134,7 @@ export default function GamesPage() {
       else {
         toast.success('✓ MISSION ELIMINATED')
         setDeleteConfirm(null)
-        fetchGames()
+        fetchData()
       }
     } catch {
       toast.error('SYSTEM ERROR')
@@ -123,7 +147,7 @@ export default function GamesPage() {
         <div className="min-w-0">
           <div className="classified-badge mb-1.5">OPERATIONS REGISTRY</div>
           <h1 className="mono text-xl sm:text-2xl font-black text-white tracking-wider">MISSIONS</h1>
-          <p className="text-mission-muted text-xs sm:text-sm mt-0.5">{games.length} missions configured</p>
+          <p className="text-mission-muted text-xs sm:text-sm mt-0.5">{games.length} missions configured · 1 officer per mission</p>
         </div>
         <button onClick={openCreate} className="btn-mission flex items-center gap-2 flex-shrink-0 py-2 px-3 sm:py-2.5 sm:px-4 text-xs sm:text-sm">
           <Plus className="w-4 h-4" /><span className="hidden sm:inline">NEW MISSION</span><span className="sm:hidden">NEW</span>
@@ -194,19 +218,17 @@ export default function GamesPage() {
                   </div>
 
                   <div className="mb-4">
-                    <div className="section-label">ASSIGNED OFFICERS</div>
-                    {game.facilitators && game.facilitators.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {game.facilitators.map((f) => (
-                          <span key={f.id} className={`mono text-xs px-2 py-0.5 rounded border ${f.isActive ? 'text-green-400 border-green-900/40 bg-green-900/10' : 'text-mission-muted border-mission-border'}`}>
-                            {f.faciId}
-                          </span>
-                        ))}
+                    <div className="section-label">ASSIGNED OFFICER (1 MAX)</div>
+                    {game.facilitator ? (
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded border text-xs font-semibold text-green-400 border-green-900/40 bg-green-900/10">
+                        <UserCheck className="w-3.5 h-3.5 text-green-400" />
+                        <span>{game.facilitator.name}</span>
+                        <span className="mono text-[10px] text-mission-muted">({game.facilitator.faciId})</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 text-mission-muted text-sm">
-                        <Users className="w-3 h-3" />
-                        <span>No officers assigned</span>
+                      <div className="flex items-center gap-2 text-mission-muted text-xs">
+                        <UserCheck className="w-3.5 h-3.5 opacity-50" />
+                        <span>— UNASSIGNED —</span>
                       </div>
                     )}
                   </div>
@@ -292,9 +314,26 @@ export default function GamesPage() {
                       min="1"
                     />
                     <p className="text-mission-muted text-xs mt-1">
-                      Facilitators can award up to this many points for this mission.
+                      Facilitator can award up to this many points for this mission.
                     </p>
                   </div>
+
+                  <div>
+                    <label className="section-label block mb-1">ASSIGNED OFFICER (1 OFFICER PER MISSION)</label>
+                    <select
+                      value={form.facilitatorId}
+                      onChange={(e) => setForm((f) => ({ ...f, facilitatorId: e.target.value }))}
+                      className="mission-input"
+                    >
+                      <option value="">— UNASSIGNED —</option>
+                      {facilitators.map((fac) => (
+                        <option key={fac.id} value={fac.id}>
+                          {fac.name} ({fac.faciId})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <div className="flex items-center gap-3">
                     <input type="checkbox" id="isActive" checked={form.isActive}
                       onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}

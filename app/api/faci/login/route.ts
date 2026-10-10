@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     // Find facilitator
     const facilitator = await prisma.facilitator.findUnique({
       where: { faciId: faciId.toUpperCase() },
-      include: { game: true },
+      include: { games: true },
     })
 
     if (!facilitator) {
@@ -33,7 +33,6 @@ export async function POST(req: NextRequest) {
       role: 'facilitator',
       faciId: facilitator.faciId,
       facilitatorId: facilitator.id,
-      gameId: facilitator.gameId,
     }, '12h')
 
     const res = NextResponse.json({
@@ -42,7 +41,21 @@ export async function POST(req: NextRequest) {
       facilitator: {
         faciId: facilitator.faciId,
         name: facilitator.name,
-        game: facilitator.game ? { id: facilitator.game.id, name: facilitator.game.name, location: facilitator.game.location } : null,
+        games: facilitator.games.map((g) => ({
+          id: g.id,
+          name: g.name,
+          location: g.location,
+          maxPoints: g.maxPoints,
+          isLive: g.isLive,
+        })),
+        // For backwards compatibility if any client reads game
+        game: facilitator.games[0]
+          ? {
+              id: facilitator.games[0].id,
+              name: facilitator.games[0].name,
+              location: facilitator.games[0].location,
+            }
+          : null,
       },
     })
 

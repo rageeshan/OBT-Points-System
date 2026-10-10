@@ -39,17 +39,18 @@ model TeamMember {
 }
 
 model Game {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  location    String?
-  maxPoints   Int?     @map("max_points")
-  isActive    Boolean  @default(true) @map("is_active")
-  isLive      Boolean  @default(false) @map("is_live")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(cuid())
+  name          String   @unique
+  description   String?
+  location      String?
+  maxPoints     Int?     @map("max_points")
+  isActive      Boolean  @default(true) @map("is_active")
+  isLive        Boolean  @default(false) @map("is_live")
+  facilitatorId String?  @map("facilitator_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  facilitators Facilitator[]
+  facilitator  Facilitator?       @relation(fields: [facilitatorId], references: [id], onDelete: SetNull)
   transactions PointTransaction[]
 
   @@map("games")
@@ -60,30 +61,45 @@ model Facilitator {
   faciId       String   @unique @map("faci_id")
   name         String
   passwordHash String   @map("password_hash")
-  gameId       String?  @map("game_id")
   isActive     Boolean  @default(true) @map("is_active")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  game         Game?              @relation(fields: [gameId], references: [id], onDelete: SetNull)
+  games        Game[]
   transactions PointTransaction[]
 
   @@map("facilitators")
+}
+
+model Trader {
+  id           String   @id @default(cuid())
+  traderId     String   @unique @map("trader_id")
+  name         String
+  passwordHash String   @map("password_hash")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  transactions PointTransaction[]
+
+  @@map("traders")
 }
 
 model PointTransaction {
   id            String   @id @default(cuid())
   txnId         String   @unique @map("txn_id")
   teamId        String   @map("team_id")
-  gameId        String   @map("game_id")
-  facilitatorId String   @map("facilitator_id")
+  gameId        String?  @map("game_id")
+  facilitatorId String?  @map("facilitator_id")
+  traderId      String?  @map("trader_id")
   points        Int
   note          String?
   createdAt     DateTime @default(now()) @map("created_at")
 
-  team        Team        @relation(fields: [teamId], references: [id])
-  game        Game        @relation(fields: [gameId], references: [id])
-  facilitator Facilitator @relation(fields: [facilitatorId], references: [id])
+  team        Team         @relation(fields: [teamId], references: [id])
+  game        Game?        @relation(fields: [gameId], references: [id])
+  facilitator Facilitator? @relation(fields: [facilitatorId], references: [id])
+  trader      Trader?      @relation(fields: [traderId], references: [id])
 
   @@map("point_transactions")
 }

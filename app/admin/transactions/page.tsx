@@ -1,18 +1,19 @@
-
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Receipt, Zap, Clock, RefreshCw } from 'lucide-react'
+import { Receipt, Zap, Clock, RefreshCw, ArrowDownRight, Coins } from 'lucide-react'
 
 interface Transaction {
   id: string
   txnId: string
   points: number
+  note?: string | null
   createdAt: string
   team: { id: string; name: string }
-  game: { id: string; name: string }
-  facilitator: { id: string; faciId: string; name: string }
+  game?: { id: string; name: string } | null
+  facilitator?: { id: string; faciId: string; name: string } | null
+  trader?: { id: string; traderId: string; name: string } | null
 }
 
 export default function TransactionsPage() {
@@ -44,7 +45,7 @@ export default function TransactionsPage() {
         <div>
           <div className="classified-badge mb-2">AUDIT LOG</div>
           <h1 className="mono text-2xl font-black text-white tracking-wider">POINTS HISTORY</h1>
-          <p className="text-mission-muted text-sm mt-1">{total} transactions recorded</p>
+          <p className="text-mission-muted text-sm mt-1">{total} transactions recorded (missions &amp; trade deductions)</p>
         </div>
         <button onClick={fetchTransactions} className="btn-ghost py-2 px-4 text-xs flex items-center gap-2">
           <RefreshCw className="w-3 h-3" />REFRESH
@@ -70,76 +71,121 @@ export default function TransactionsPage() {
                   <tr>
                     <th>TXN ID</th>
                     <th>MISSION UNIT</th>
-                    <th>MISSION</th>
-                    <th>OFFICER</th>
+                    <th>SOURCE / REASON</th>
+                    <th>OPERATIVE</th>
                     <th>CREDITS</th>
                     <th>TIME</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.map((txn, idx) => (
-                    <motion.tr
-                      key={txn.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.02 }}
-                    >
-                      <td><span className="mono text-xs text-mission-amber">{txn.txnId}</span></td>
-                      <td><span className="mono font-bold text-white">{txn.team.name}</span></td>
-                      <td><span className="text-mission-muted text-sm">{txn.game.name}</span></td>
-                      <td><span className="mono text-xs text-blue-400">{txn.facilitator.faciId}</span></td>
-                      <td>
-                        <span className="mono font-bold text-green-400 flex items-center gap-1">
-                          <Zap className="w-3 h-3" />+{txn.points}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-1 text-mission-muted">
-                          <Clock className="w-3 h-3" />
-                          <span className="mono text-xs">
-                            {new Date(txn.createdAt).toLocaleString('en-GB', {
-                              day: '2-digit', month: '2-digit', year: '2-digit',
-                              hour: '2-digit', minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
+                  {transactions.map((txn, idx) => {
+                    const isDeduction = txn.points < 0
+                    return (
+                      <motion.tr
+                        key={txn.id}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.02 }}
+                      >
+                        <td><span className="mono text-xs text-mission-amber">{txn.txnId}</span></td>
+                        <td><span className="mono font-bold text-white">{txn.team.name}</span></td>
+                        <td>
+                          {isDeduction ? (
+                            <div className="flex flex-col">
+                              <span className="inline-flex items-center gap-1 text-xs text-red-400 font-bold">
+                                <ArrowDownRight className="w-3 h-3" /> TRADE DEDUCTION
+                              </span>
+                              {txn.note && (
+                                <span className="text-[11px] text-mission-muted italic">{txn.note}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-mission-muted text-sm">{txn.game?.name || 'MISSION'}</span>
+                          )}
+                        </td>
+                        <td>
+                          {isDeduction ? (
+                            <span className="mono text-xs text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/40">
+                              {txn.trader?.traderId || 'TRADER'}
+                            </span>
+                          ) : (
+                            <span className="mono text-xs text-blue-400">
+                              {txn.facilitator?.faciId || 'HQ'}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          {isDeduction ? (
+                            <span className="mono font-bold text-red-400 flex items-center gap-1">
+                              <ArrowDownRight className="w-3 h-3" />{txn.points}
+                            </span>
+                          ) : (
+                            <span className="mono font-bold text-green-400 flex items-center gap-1">
+                              <Zap className="w-3 h-3" />+{txn.points}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-1 text-mission-muted">
+                            <Clock className="w-3 h-3" />
+                            <span className="mono text-xs" suppressHydrationWarning>
+                              {new Date(txn.createdAt).toLocaleString('en-GB', {
+                                day: '2-digit', month: '2-digit', year: '2-digit',
+                                hour: '2-digit', minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Mobile Cards */}
             <div className="md:hidden space-y-3">
-              {transactions.map((txn, idx) => (
-                <motion.div
-                  key={txn.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.03 }}
-                  className="mission-card rounded-xl p-4"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="mono text-xs text-mission-amber">{txn.txnId}</span>
-                    <span className="mono font-bold text-green-400 flex items-center gap-1">
-                      <Zap className="w-3 h-3" />+{txn.points}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="mono font-bold text-white">{txn.team.name}</div>
-                      <div className="text-mission-muted text-xs">{txn.game.name}</div>
+              {transactions.map((txn, idx) => {
+                const isDeduction = txn.points < 0
+                return (
+                  <motion.div
+                    key={txn.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.03 }}
+                    className="mission-card rounded-xl p-4"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="mono text-xs text-mission-amber">{txn.txnId}</span>
+                      {isDeduction ? (
+                        <span className="mono font-bold text-red-400 flex items-center gap-1">
+                          <ArrowDownRight className="w-3 h-3" />{txn.points}
+                        </span>
+                      ) : (
+                        <span className="mono font-bold text-green-400 flex items-center gap-1">
+                          <Zap className="w-3 h-3" />+{txn.points}
+                        </span>
+                      )}
                     </div>
-                    <div className="text-right">
-                      <div className="mono text-xs text-blue-400">{txn.facilitator.faciId}</div>
-                      <div className="mono text-xs text-mission-muted">
-                        {new Date(txn.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="mono font-bold text-white">{txn.team.name}</div>
+                        <div className="text-mission-muted text-xs">
+                          {isDeduction ? `TRADE: ${txn.note || 'Deduction'}` : txn.game?.name || 'MISSION'}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="mono text-xs text-amber-400">
+                          {isDeduction ? (txn.trader?.traderId || 'TRADER') : (txn.facilitator?.faciId || 'HQ')}
+                        </div>
+                        <div className="mono text-xs text-mission-muted" suppressHydrationWarning>
+                          {new Date(txn.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                )
+              })}
             </div>
 
             {/* Pagination */}

@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  Coins,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 
@@ -24,6 +25,7 @@ const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/teams', label: 'Units', icon: Users },
   { href: '/admin/facilitators', label: 'Officers', icon: UserCheck },
+  { href: '/admin/traders', label: 'Traders', icon: Coins },
   { href: '/admin/games', label: 'Missions', icon: Target },
   { href: '/admin/leaderboard', label: 'Ranking', icon: Trophy },
   { href: '/admin/transactions', label: 'History', icon: Receipt },
