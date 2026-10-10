@@ -78,23 +78,7 @@ export async function DELETE(
   if (!session) return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 })
 
   try {
-    await prisma.$transaction([
-      // 1. Unassign any missions linked to this officer
-      prisma.game.updateMany({
-        where: { facilitatorId: id },
-        data: { facilitatorId: null },
-      }),
-      // 2. Clear facilitatorId on historic point transactions so team credits remain intact
-      prisma.pointTransaction.updateMany({
-        where: { facilitatorId: id },
-        data: { facilitatorId: null },
-      }),
-      // 3. Safely delete the facilitator
-      prisma.facilitator.delete({
-        where: { id },
-      }),
-    ])
-
+    await prisma.facilitator.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('Failed to delete facilitator:', err)
