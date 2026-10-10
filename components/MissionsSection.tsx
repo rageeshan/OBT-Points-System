@@ -129,23 +129,19 @@ function MissionsTable({
       />
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[780px]">
+        <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-mission-border/80 bg-black/50 text-[11px] mono uppercase tracking-wider text-mission-muted select-none">
-              <th className="py-3.5 px-4 text-center font-bold w-14">#</th>
-              <th className="py-3.5 px-4 font-bold min-w-[190px]">STATUS &amp; PRIORITY</th>
-              <th className="py-3.5 px-4 font-bold min-w-[220px]">MISSION</th>
-              <th className="py-3.5 px-4 font-bold min-w-[160px]">DEPLOYMENT ZONE</th>
-              <th className="py-3.5 px-4 font-bold min-w-[200px]">MISSION OFFICER</th>
-              <th className="py-3.5 px-4 font-bold hidden lg:table-cell min-w-[220px]">TACTICAL INTEL</th>
-              <th className="py-3.5 px-4 text-right font-bold w-32">ACTION</th>
+              <th className="py-3.5 px-4 text-center font-bold w-12 sm:w-16">#</th>
+              <th className="py-3.5 px-4 font-bold min-w-[200px]">MISSION</th>
+              <th className="py-3.5 px-4 font-bold min-w-[150px]">DEPLOYMENT ZONE</th>
+              <th className="py-3.5 px-4 font-bold hidden sm:table-cell">TACTICAL INTEL</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-mission-border/30">
             {games.map((game, index) => {
               const occupied = game.isLive
               const priority = !occupied && isTopPriority(game, now)
-              const idleMins = getIdleMinutes(game, now)
 
               return (
                 <motion.tr
@@ -155,6 +151,7 @@ function MissionsTable({
                   initial="hidden"
                   animate="visible"
                   onClick={() => onSelect(game)}
+                  title="Click to view mission status, officer & tactical details"
                   className={`group cursor-pointer transition-all ${
                     occupied
                       ? 'hover:bg-orange-500/10'
@@ -171,42 +168,6 @@ function MissionsTable({
                       </span>
                     ) : (
                       String(index + 1).padStart(2, '0')
-                    )}
-                  </td>
-
-                  {/* Status & Priority Badge */}
-                  <td className="py-4 px-4 whitespace-nowrap">
-                    {occupied ? (
-                      <div className="flex flex-col gap-1">
-                        <span className="inline-flex items-center gap-1.5 text-[10px] mono font-bold tracking-widest px-2.5 py-1 rounded-full border border-orange-500/40 bg-orange-500/10 text-orange-400 shadow-sm w-fit">
-                          <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
-                          IN PROGRESS
-                        </span>
-                        <span className="mono text-[10px] text-orange-400/80">
-                          Team inside
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1 text-[10px] mono font-bold tracking-widest px-2 py-0.5 rounded-full border border-green-500/40 bg-green-500/10 text-green-400">
-                            <CheckCircle className="w-2.5 h-2.5" />
-                            AVAILABLE
-                          </span>
-                          {priority && (
-                            <span className="inline-flex items-center gap-1 text-[9px] mono font-black tracking-widest px-2 py-0.5 rounded-full border border-red-500/60 bg-red-500/25 text-red-300 shadow-sm shadow-red-500/30 animate-pulse" suppressHydrationWarning>
-                              <AlertTriangle className="w-2.5 h-2.5 text-red-400" />
-                              TOP PRIORITY
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 text-[10px] mono">
-                          <Clock className={`w-3 h-3 ${priority ? 'text-red-400' : 'text-mission-muted'}`} />
-                          <span className={priority ? 'text-red-400 font-bold' : 'text-mission-muted'} suppressHydrationWarning>
-                            {priority ? `Inactive for ${idleMins}m` : formatIdleTime(idleMins)}
-                          </span>
-                        </div>
-                      </div>
                     )}
                   </td>
 
@@ -248,7 +209,7 @@ function MissionsTable({
                           </div>
                         )}
                         {game.description && (
-                          <p className="text-[11px] text-mission-muted truncate max-w-xs lg:hidden mt-0.5">
+                          <p className="text-[11px] text-mission-muted truncate max-w-xs sm:hidden mt-0.5">
                             {game.description}
                           </p>
                         )}
@@ -266,60 +227,16 @@ function MissionsTable({
                     </div>
                   </td>
 
-                  {/* Assigned Facilitator */}
-                  <td className="py-4 px-4">
-                    {(() => {
-                      const facis = getGameFacilitators(game)
-                      return facis.length > 0 ? (
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {facis.map((f) => (
-                            <span
-                              key={f.faciId}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/40 border border-green-500/20 text-xs text-green-400 font-semibold"
-                            >
-                              <UserCheck className="w-3 h-3 text-green-400 flex-shrink-0" />
-                              <span className="truncate max-w-[120px]">{f.name}</span>
-                              <span className="mono text-[9px] text-mission-muted font-normal">
-                                ({f.faciId})
-                              </span>
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="mono text-xs text-mission-muted">— UNASSIGNED —</span>
-                      )
-                    })()}
-                  </td>
-
                   {/* Tactical Intel Preview */}
-                  <td className="py-4 px-4 hidden lg:table-cell max-w-xs">
-                    <p className="text-xs text-mission-muted line-clamp-1 leading-relaxed">
-                      {game.description || 'Standard tactical outbound parameters apply.'}
-                    </p>
-                  </td>
-
-                  {/* Action */}
-                  <td className="py-4 px-4 text-right whitespace-nowrap">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onSelect(game)
-                      }}
-                      className={`px-3 py-1.5 rounded-lg text-xs mono font-bold tracking-wider inline-flex items-center gap-1.5 transition-all ${
-                        occupied
-                          ? 'bg-orange-500/10 text-orange-400 border border-orange-500/40 hover:bg-orange-500/20 hover:border-orange-400'
-                          : priority
-                            ? 'bg-red-500/15 text-red-400 border border-red-500/40 hover:bg-red-500/25 hover:border-red-400 shadow-sm shadow-red-500/20'
-                            : 'bg-mission-red/10 text-mission-red border border-mission-red/30 hover:bg-mission-red/20 hover:border-mission-red'
-                      }`}
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>INTEL</span>
-                      <span className="text-[10px] opacity-75 group-hover:translate-x-0.5 transition-transform">
-                        &rarr;
+                  <td className="py-4 px-4 hidden sm:table-cell">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs text-mission-muted line-clamp-1 leading-relaxed">
+                        {game.description || 'Standard tactical outbound parameters apply.'}
+                      </p>
+                      <span className="mono text-[10px] text-mission-red opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 font-bold hidden md:inline-flex items-center gap-1">
+                        VIEW INTEL &rarr;
                       </span>
-                    </button>
+                    </div>
                   </td>
                 </motion.tr>
               )
@@ -328,10 +245,10 @@ function MissionsTable({
         </table>
       </div>
 
-      {/* Mobile scroll helper */}
+      {/* Mobile tap helper */}
       <div className="sm:hidden px-4 py-2 bg-black/40 border-t border-mission-border/40 text-center">
         <span className="mono text-[10px] text-mission-muted">
-          ← SWIPE HORIZONTALLY TO INSPECT ALL MISSION INTEL →
+          ← TAP ANY MISSION ROW TO VIEW FULL INTEL, STATUS &amp; OFFICERS →
         </span>
       </div>
     </div>
@@ -1025,21 +942,40 @@ export default function MissionsSection({
                   <div className="bg-black/40 rounded-xl p-4 border border-mission-border">
                     <div className="section-label text-[10px] mb-1 flex items-center gap-1.5">
                       <Shield className="w-3.5 h-3.5 text-green-400" />
-                      MISSION STATUS
+                      STATUS &amp; PRIORITY
                     </div>
                     {isSelectedLive ? (
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
-                        <span className="mono text-base font-bold text-orange-400 tracking-wider">
-                          IN PROGRESS / OCCUPIED
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                          <span className="mono text-base font-bold text-orange-400 tracking-wider">
+                            IN PROGRESS
+                          </span>
+                        </div>
+                        <span className="mono text-xs text-orange-400/80">
+                          Zone currently engaged by a team
                         </span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="w-2 h-2 rounded-full bg-green-400" />
-                        <span className="mono text-base font-bold text-green-400 tracking-wider">
-                          AVAILABLE {isSelectedPriority && '• TOP PRIORITY'}
-                        </span>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <span className="w-2 h-2 rounded-full bg-green-400" />
+                          <span className="mono text-base font-bold text-green-400 tracking-wider">
+                            AVAILABLE
+                          </span>
+                          {isSelectedPriority && (
+                            <span className="inline-flex items-center gap-1 text-[9px] mono font-black tracking-widest px-2 py-0.5 rounded-full border border-red-500/60 bg-red-500/25 text-red-300 shadow-sm animate-pulse">
+                              <AlertTriangle className="w-2.5 h-2.5 text-red-400" />
+                              TOP PRIORITY
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs mono text-mission-muted">
+                          <Clock className={`w-3.5 h-3.5 ${isSelectedPriority ? 'text-red-400' : 'text-mission-muted'}`} />
+                          <span className={isSelectedPriority ? 'text-red-400 font-bold' : ''}>
+                            {isSelectedPriority ? `Inactive for ${selectedIdleMins}m` : formatIdleTime(selectedIdleMins)}
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1066,15 +1002,14 @@ export default function MissionsSection({
                   </div>
                 </div>
 
-                {/* Officers */}
-                {/* Officers */}
+                {/* Mission Officers */}
                 {(() => {
                   const selectedFacis = getGameFacilitators(selectedGame)
                   return (
-                    <div className="mb-8">
+                    <div className="mb-6">
                       <div className="section-label text-[10px] mb-2 flex items-center gap-1.5">
                         <UserCheck className="w-3.5 h-3.5 text-green-400" />
-                        ASSIGNED OFFICERS &amp; FACILITATORS ({selectedFacis.length})
+                        ASSIGNED MISSION OFFICER{selectedFacis.length > 1 ? 'S' : ''} ({selectedFacis.length})
                       </div>
                       {selectedFacis.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1099,13 +1034,24 @@ export default function MissionsSection({
                       ) : (
                         <div className="bg-black/30 rounded-xl p-4 border border-mission-border text-center">
                           <div className="mono text-xs text-mission-muted">
-                            NO OFFICER ASSIGNED YET — STANDBY MODE
+                            NO MISSION OFFICER ASSIGNED YET — STANDBY MODE
                           </div>
                         </div>
                       )}
                     </div>
                   )
                 })()}
+
+                {/* Close Button Footer */}
+                <div className="flex justify-end pt-3 border-t border-mission-border/40">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedGame(null)}
+                    className="btn-ghost px-5 py-2 text-xs mono tracking-wider"
+                  >
+                    CLOSE BRIEFING
+                  </button>
+                </div>
               </motion.div>
             </div>
           )
